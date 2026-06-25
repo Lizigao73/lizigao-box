@@ -3,9 +3,11 @@ import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
+import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
-  site: 'https://lizigao-box.vercel.app',
+  site: 'https://lizigao-box.pages.dev',
+  adapter: cloudflare(),
   integrations: [
     tailwind({
       applyBaseStyles: false,
