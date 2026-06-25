@@ -1,0 +1,40 @@
+---
+import { STATUS_META, type Status } from '../consts';
+
+interface Props {
+  status: Status;
+  withLabel?: boolean;
+  size?: 'sm' | 'md';
+}
+
+const { status, withLabel = true, size = 'sm' } = Astro.props;
+const meta = STATUS_META[status];
+
+const colorMap: Record<string, string> = {
+  moss:  'bg-status-shipped/85    shadow-[0_0_0_3px_var(--status-shipped-soft,rgba(74,222,128,0.18))]',
+  amber: 'bg-status-building      shadow-[0_0_0_3px_var(--status-building-soft,rgba(251,191,36,0.20))]',
+  iris:  'bg-status-experiment    shadow-[0_0_0_3px_var(--status-experiment-soft,rgba(167,139,250,0.20))]',
+  sky:   'bg-status-online        shadow-[0_0_0_3px_var(--status-online-soft,rgba(56,189,248,0.20))]',
+};
+
+const sizeMap = {
+  sm: { dot: 'h-2 w-2', text: 'text-xs' },
+  md: { dot: 'h-2.5 w-2.5', text: 'text-sm' },
+};
+---
+
+<span class:list={['inline-flex items-center gap-2', withLabel && sizeMap[size].text]}>
+  <span
+    class:list={[
+      'inline-block rounded-full',
+      colorMap[meta.color],
+      sizeMap[size].dot,
+      'animate-pulse-slow',
+    ]}
+    aria-hidden="true"
+  />
+  {withLabel && (
+    <span class="text-text-secondary">{meta.label}</span>
+  )}
+  <span class="sr-only">{meta.zh}</span>
+</span>

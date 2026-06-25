@@ -1,0 +1,124 @@
+---
+// src/pages/downloads.astro
+// 下载中心：展示所有 EXE，附带下载次数
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { DOWNLOADS, formatSize } from '../lib/downloads';
+
+// 静态 fallback：构建时把当前计数埋到 HTML，前端再叠加真实值
+const fallbackCounts: Record<string, number> = {};
+for (const d of DOWNLOADS) {
+  fallbackCounts[d.id] = 0; // 上线后会被 API 覆盖
+}
+---
+
+<BaseLayout
+  title="下载中心"
+  description="所有桌面应用的最新版本下载 · 含 SHA256 校验和 · 实时下载计数"
+  ogImage="downloads"
+>
+  <section class="mx-auto max-w-5xl px-5 py-16 sm:px-8">
+    <header class="mb-12">
+      <h1 class="font-display text-4xl font-bold tracking-tight sm:text-5xl">下载中心</h1>
+      <p class="mt-4 text-base text-[var(--text-secondary)] sm:text-lg">
+        桌面应用最新版本 · Windows 10/11 64-bit · 含 SHA256 校验和 · 实时下载计数
+      </p>
+    </header>
+
+    <div class="grid gap-4" id="downloads-grid">
+      {DOWNLOADS.map(d => (
+        <article
+          class="group relative flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)]/60 p-6 transition-all hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)]/80 sm:flex-row sm:items-center"
+          data-download-id={d.id}
+        >
+          <!-- 平台 icon -->
+          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-2xl">
+            {d.platform === 'windows' ? '🪟' : d.platform === 'macos' ? '🍎' : '🐧'}
+          </div>
+
+          <!-- 名称 + 描述 -->
+          <div class="flex-1 min-w-0">
+            <h2 class="font-display text-xl font-semibold text-[var(--text-primary)]">
+              {d.name}
+              <span class="ml-2 inline-block rounded-full bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-xs font-medium text-[var(--accent)]">
+                v{d.version}
+              </span>
+            </h2>
+            <p class="mt-1 text-sm text-[var(--text-secondary)]">{d.description}</p>
+            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-tertiary)]">
+              <span>📦 {formatSize(d.size)}</span>
+              <span>📅 {new Date(d.releasedAt).toLocaleDateString('zh-CN')}</span>
+              <span class="font-mono">SHA256: <code class="text-[var(--text-secondary)]">{d.sha256.slice(0, 16)}…</code></span>
+            </div>
+          </div>
+
+          <!-- 下载按钮 + 计数 -->
+          <div class="flex shrink-0 flex-col items-end gap-2">
+            <a
+              href={`/api/download/${d.id}`}
+              class="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 font-semibold text-[var(--bg-primary)] transition-transform hover:scale-105"
+              data-download-trigger={d.id}
+              data-event-name={`download-${d.id}`}
+            >
+              <span>下载</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </a>
+            <div class="text-right text-xs text-[var(--text-tertiary)]">
+              <span class="font-mono font-semibold text-[var(--text-secondary)]" data-download-count={d.id}>0</span> 次下载
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <!-- 说明 -->
+    <aside class="mt-12 rounded-2xl border border-[var(--border-soft)] bg-[var(--bg-secondary)]/30 p-6 text-sm text-[var(--text-secondary)]">
+      <h3 class="mb-2 font-semibold text-[var(--text-primary)]">📝 说明</h3>
+      <ul class="list-disc space-y-1 pl-5">
+        <li>下载计数每日自动统计，刷新页面即可看到最新数字</li>
+        <li>首次运行可能被 Windows Defender 拦截（未签名），点"仍要运行"即可</li>
+        <li>完整 SHA256 校验和见每个 .exe 同目录下的 <code>.sha256</code> 文件</li>
+        <li>开源 / 闭源说明见各项目详情页</li>
+      </ul>
+    </aside>
+  </section>
+
+  <script>
+    import { trackEvent, EVENTS } from '../lib/analytics';
+
+    // 前端拉真实计数
+    async function loadCounts() {
+      try {
+        const res = await fetch('/api/downloads/count');
+        if (!res.ok) return;
+        const { counts } = await res.json();
+        document.querySelectorAll('[data-download-id]').forEach(card => {
+          const id = card.getAttribute('data-download-id');
+          const counter = card.querySelector(`[data-download-count="${id}"]`);
+          if (counter && counts[id] != null) {
+            counter.textContent = counts[id].toLocaleString('zh-CN');
+          }
+        });
+      } catch (e) {
+        console.warn('计数加载失败：', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCounts();
+      // 每 60s 刷一次
+      setInterval(loadCounts, 60_000);
+
+      // 点击下载 → 触发 Plausible 事件
+      document.querySelectorAll('[data-download-trigger]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-download-trigger');
+          if (id) trackEvent(EVENTS.DOWNLOAD, { file: id });
+        });
+      });
+    });
+  </script>
+</BaseLayout>

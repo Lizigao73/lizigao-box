@@ -1,0 +1,174 @@
+---
+import { STATUS_META, CATEGORY_META, type Status, type Category } from '../consts';
+
+interface Props {
+  /** 当前激活的状态 */
+  activeStatus: 'all' | Status;
+  /** 当前激活的类别（支持多选，'all' 表示全部） */
+  activeCategories: ('all' | Category)[];
+}
+
+const { activeStatus, activeCategories } = Astro.props;
+
+const statusOptions: Array<{ value: 'all' | Status; label: string; color?: string }> = [
+  { value: 'all',        label: '全部' },
+  { value: 'shipped',    label: STATUS_META.shipped.label,    color: 'shipped' },
+  { value: 'building',   label: STATUS_META.building.label,   color: 'building' },
+  { value: 'experiment', label: STATUS_META.experiment.label, color: 'experiment' },
+  { value: 'online',     label: STATUS_META.online.label,     color: 'online' },
+];
+
+const categoryOptions: Array<{ value: 'all' | Category; label: string }> = [
+  { value: 'all',     label: '全部类别' },
+  { value: 'desktop', label: CATEGORY_META.desktop.label },
+  { value: 'data',    label: CATEGORY_META.data.label },
+  { value: 'ai',      label: CATEGORY_META.ai.label },
+  { value: 'other',   label: CATEGORY_META.other.label },
+];
+---
+
+<div
+  id="filter-bar"
+  class="space-y-4"
+  data-status={activeStatus}
+  data-categories={activeCategories.join(',')}
+>
+  <div class="flex flex-wrap items-center gap-2" role="tablist" aria-label="按状态筛选">
+    <span class="font-mono text-xs uppercase tracking-widest text-text-tertiary">状态</span>
+    {
+      statusOptions.map((opt) => {
+        const isActive = opt.value === activeStatus;
+        const dotColor = opt.color
+          ? {
+              shipped:    'bg-status-shipped',
+              building:   'bg-status-building',
+              experiment: 'bg-status-experiment',
+              online:     'bg-status-online',
+            }[opt.color]
+          : null;
+        return (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            data-filter-status={opt.value}
+            class:list={[
+              'inline-flex items-center gap-2 rounded-pill border px-3.5 py-1.5 text-sm transition-all',
+              isActive
+                ? 'border-accent/60 bg-accent/10 text-text-primary'
+                : 'border-border bg-bg-secondary/50 text-text-secondary hover:border-text-tertiary hover:text-text-primary',
+            ]}
+          >
+            {dotColor && <span class:list={['h-1.5 w-1.5 rounded-full', dotColor]} aria-hidden="true" />}
+            {opt.label}
+          </button>
+        );
+      })
+    }
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2" role="group" aria-label="按类别筛选">
+    <span class="font-mono text-xs uppercase tracking-widest text-text-tertiary">类别</span>
+    {
+      categoryOptions.map((opt) => {
+        const isActive = opt.value === 'all'
+          ? activeCategories.length === 1 && activeCategories[0] === 'all'
+          : activeCategories.includes(opt.value);
+        return (
+          <button
+            type="button"
+            aria-pressed={isActive}
+            data-filter-category={opt.value}
+            class:list={[
+              'rounded-pill border px-3 py-1 text-xs transition-all',
+              isActive
+                ? 'border-accent/60 bg-accent/10 text-text-primary'
+                : 'border-border bg-bg-secondary/50 text-text-secondary hover:border-text-tertiary hover:text-text-primary',
+            ]}
+          >
+            {opt.label}
+          </button>
+        );
+      })
+    }
+    <span
+      id="filter-empty"
+      class="hidden rounded-pill border border-status-building/40 bg-status-building/10 px-3 py-1 text-xs text-status-building"
+    >
+      没有匹配的项目
+    </span>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    const bar = document.getElementById('filter-bar');
+    if (!bar) return;
+
+    const statusBtns = bar.querySelectorAll('[data-filter-status]');
+    const categoryBtns = bar.querySelectorAll('[data-filter-category]');
+    const emptyHint = document.getElementById('filter-empty');
+    const cards = document.querySelectorAll('[data-category][data-status][data-title]');
+
+    let activeStatus = bar.dataset.status || 'all';
+    let activeCategories = (bar.dataset.categories || 'all').split(',');
+
+    const ACTIVE = ['border-accent/60', 'bg-accent/10', 'text-text-primary'];
+    const INACTIVE = ['border-border', 'bg-bg-secondary/50', 'text-text-secondary'];
+
+    const applyFilters = () => {
+      let visible = 0;
+      cards.forEach((card) => {
+        const c = card.getAttribute('data-category');
+        const s = card.getAttribute('data-status');
+        const statusOk = activeStatus === 'all' || s === activeStatus;
+        const categoryOk = activeCategories.includes('all') || activeCategories.includes(c);
+        const show = statusOk && categoryOk;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      if (emptyHint) emptyHint.classList.toggle('hidden', visible !== 0);
+    };
+
+    const setClasses = (el, sel) => {
+      [...ACTIVE, ...INACTIVE].forEach((c) => el.classList.remove(c));
+      el.classList.add(...(sel ? ACTIVE : INACTIVE));
+    };
+
+    statusBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeStatus = btn.getAttribute('data-filter-status') || 'all';
+        statusBtns.forEach((b) => {
+          const sel = b === btn;
+          b.setAttribute('aria-selected', String(sel));
+          setClasses(b, sel);
+        });
+        applyFilters();
+      });
+    });
+
+    categoryBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const val = btn.getAttribute('data-filter-category') || 'all';
+        if (val === 'all') {
+          activeCategories = ['all'];
+        } else {
+          activeCategories = activeCategories.filter((c) => c !== 'all');
+          if (activeCategories.includes(val)) {
+            activeCategories = activeCategories.filter((c) => c !== val);
+            if (activeCategories.length === 0) activeCategories = ['all'];
+          } else {
+            activeCategories.push(val);
+          }
+        }
+        categoryBtns.forEach((b) => {
+          const v = b.getAttribute('data-filter-category');
+          const sel = activeCategories.includes(v);
+          b.setAttribute('aria-pressed', String(sel));
+          setClasses(b, sel);
+        });
+        applyFilters();
+      });
+    });
+  })();
+</script>

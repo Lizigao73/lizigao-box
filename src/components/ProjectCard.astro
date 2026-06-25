@@ -1,0 +1,87 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import StatusBadge from './StatusBadge.astro';
+import CategoryChip from './CategoryChip.astro';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  index?: number;
+  /** 是否为精选 */
+  featured?: boolean;
+}
+
+const { project, index = 0, featured = false } = Astro.props;
+const { data, id } = project;
+const href = `/projects/${id}/`;
+
+const staggerIndex = (index % 8) + 1;
+const staggerClass = `stagger-${staggerIndex}`;
+
+const dateStr = data.startDate.toLocaleDateString('zh-CN', {
+  year: 'numeric',
+  month: 'short',
+});
+---
+
+<a
+  href={href}
+  class:list={[
+    'group relative flex flex-col overflow-hidden rounded-card border border-border bg-bg-secondary/70 p-5 shadow-soft transition-all duration-300',
+    'hover:-translate-y-0.5 hover:border-accent/60 hover:bg-bg-secondary hover:shadow-soft-lg',
+    'animate-fade-up opacity-0',
+    staggerClass,
+  ]}
+  data-category={data.category}
+  data-status={data.status}
+  data-title={data.title.toLowerCase()}
+>
+  <div class="flex items-center justify-between gap-2">
+    <StatusBadge status={data.status} size="sm" />
+    <CategoryChip category={data.category} size="sm" />
+  </div>
+
+  <h3
+    class="mt-4 font-serif text-lg font-semibold leading-snug text-text-primary transition-colors group-hover:text-accent"
+  >
+    {data.title}
+  </h3>
+
+  <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-text-secondary">
+    {data.summary}
+  </p>
+
+  {
+    data.tags.length > 0 && (
+      <div class="mt-4 flex flex-wrap gap-1.5">
+        {data.tags.slice(0, 4).map((tag) => (
+          <span class="rounded-md bg-bg-tertiary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+            #{tag}
+          </span>
+        ))}
+      </div>
+    )
+  }
+
+  <div class="mt-5 flex items-center justify-between text-xs text-text-tertiary">
+    <span class="font-mono">起 {dateStr}</span>
+    <span
+      class="inline-flex items-center gap-1 text-text-secondary transition-all group-hover:gap-2 group-hover:text-accent"
+    >
+      <span>查看</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:translate-x-0.5">
+        <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+      </svg>
+    </span>
+  </div>
+
+  {
+    featured && (
+      <span
+        class="absolute right-3 top-3 rounded-pill bg-accent px-2 py-0.5 font-mono text-[9px] uppercase tracking-widest text-bg-primary"
+        aria-label="精选"
+      >
+        featured
+      </span>
+    )
+  }
+</a>

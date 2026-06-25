@@ -1,0 +1,342 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import financialData from '../data/financial-snapshots.json';
+import type { FinancialSnapshot, IndexWithChange } from '../types/finance';
+
+const data = financialData;
+const snapshots: FinancialSnapshot[] = data.snapshots ?? [];
+
+// 倒序 → 升序（图表从左到右）
+const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
+
+const latest: FinancialSnapshot | undefined = sorted[sorted.length - 1];
+const prev:   FinancialSnapshot | undefined = sorted[sorted.length - 2];
+
+// 计算每个指数的当日变化
+const indices: IndexWithChange[] = [
+  { name: '上证指数', code: 'sh000001', value: latest?.shIndex ?? null, change: null, changePct: null },
+  { name: '深证成指', code: 'sz399001', value: latest?.szIndex ?? null, change: null, changePct: null },
+  { name: '标普 500', code: '^SPX',     value: latest?.sp500   ?? null, change: null, changePct: null },
+  { name: '纳斯达克', code: '^IXIC',    value: latest?.nasdaq  ?? null, change: null, changePct: null },
+];
+
+if (latest && prev) {
+  const compute = (curr: number | null, pre: number | null) => {
+    if (curr == null || pre == null) return { change: null, changePct: null };
+    const change = curr - pre;
+    const changePct = pre === 0 ? null : change / pre;
+    return { change, changePct };
+  };
+  indices[0] = { ...indices[0], ...compute(latest.shIndex, prev.shIndex) };
+  indices[1] = { ...indices[1], ...compute(latest.szIndex, prev.szIndex) };
+  indices[2] = { ...indices[2], ...compute(latest.sp500,   prev.sp500) };
+  indices[3] = { ...indices[3], ...compute(latest.nasdaq,  prev.nasdaq) };
+}
+
+// 用于折线图：30 日窗口（或全部，若不足 30 日）
+const window30 = sorted.slice(-30);
+const chartLabels = window30.map((s) => s.date);
+const chartSh  = window30.map((s) => s.shIndex);
+const chartSz  = window30.map((s) => s.szIndex);
+const chartSp  = window30.map((s) => s.sp500);
+const chartNas = window30.map((s) => s.nasdaq);
+
+const lastUpdated = data.lastUpdated;
+const source = data.source;
+---
+
+<BaseLayout title="数据追踪" description="A 股 / 美股主要指数每日快照，30 日趋势图。">
+  <section class="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
+    <!-- 头部 -->
+    <header class="mb-10">
+      <p class="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-status-online">
+        <span class="mr-2 inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full bg-status-online align-middle animate-pulse-slow"></span>
+        live snapshots · 自动每日更新
+      </p>
+      <h1 class="font-serif text-3xl font-semibold text-text-primary sm:text-4xl">
+        指数快照
+      </h1>
+      <p class="mt-3 text-sm text-text-secondary">
+        A 股 + 美股主要指数收盘后由 GitHub Actions 自动抓取，每日 16:00（北京时间）更新。
+      </p>
+      <p class="mt-1 font-mono text-xs text-text-tertiary">
+        最后更新：{lastUpdated} · 数据源：{source}
+      </p>
+    </header>
+
+    <!-- 当日卡片 -->
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        indices.map((idx) => {
+          const isUp   = (idx.change ?? 0) > 0;
+          const isDown = (idx.change ?? 0) < 0;
+          // 颜色：跟随当前主题 status 变量
+          const colorClass = isUp ? 'text-status-shipped' : isDown ? 'text-status-down' : 'text-text-tertiary';
+          const sign = isUp ? '+' : '';
+          return (
+            <div class="rounded-card border border-border bg-bg-secondary/60 p-5 shadow-soft transition-colors hover:border-status-online/40">
+              <div class="flex items-baseline justify-between">
+                <p class="font-serif text-base text-text-primary">{idx.name}</p>
+                <span class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">{idx.code}</span>
+              </div>
+              <p class:list={['mt-3 font-mono text-2xl tabular-nums', colorClass]}>
+                {idx.value != null ? idx.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+              </p>
+              {idx.change != null && (
+                <p class:list={['mt-1 font-mono text-xs tabular-nums', colorClass]}>
+                  {sign}{idx.change.toFixed(2)}
+                  <span class="ml-1.5 opacity-80">
+                    ({sign}{(idx.changePct! * 100).toFixed(2)}%)
+                  </span>
+                </p>
+              )}
+            </div>
+          );
+        })
+      }
+    </div>
+
+    <!-- 趋势图 -->
+    <div class="mt-10 rounded-card border border-border bg-bg-secondary/60 p-6 shadow-soft">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-serif text-lg font-semibold text-text-primary">近 30 日趋势</h2>
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          {
+            [
+              { label: '上证',     color: 'bg-accent' },
+              { label: '深证',     color: 'bg-status-building' },
+              { label: '标普 500', color: 'bg-status-online' },
+              { label: '纳指',     color: 'bg-status-experiment' },
+            ].map((s) => (
+              <span class="inline-flex items-center gap-1.5 text-text-secondary">
+                <span class:list={['h-2 w-2 rounded-full', s.color]} aria-hidden="true" />
+                {s.label}
+              </span>
+            ))
+          }
+        </div>
+      </div>
+      <div class="relative h-72 sm:h-96">
+        <canvas id="trend-chart" aria-label="30 日指数趋势折线图"></canvas>
+        <div
+          id="trend-chart-fallback"
+          class="absolute inset-0 hidden items-center justify-center text-sm text-text-tertiary"
+        >
+          图表加载中…
+        </div>
+        <div
+          id="trend-chart-data"
+          class="hidden"
+          data-labels={JSON.stringify(chartLabels)}
+          data-sh={JSON.stringify(chartSh)}
+          data-sz={JSON.stringify(chartSz)}
+          data-sp={JSON.stringify(chartSp)}
+          data-nas={JSON.stringify(chartNas)}
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+
+    <!-- 历史表格 -->
+    <div class="mt-10">
+      <h2 class="mb-4 font-serif text-lg font-semibold text-text-primary">历史快照</h2>
+      <div class="overflow-x-auto rounded-card border border-border bg-bg-secondary/60">
+        <table class="w-full min-w-[640px] text-left text-sm">
+          <thead>
+            <tr class="border-b border-border text-xs uppercase tracking-widest text-text-tertiary">
+              <th class="px-4 py-3 font-mono font-normal">日期</th>
+              <th class="px-4 py-3 text-right font-mono font-normal">上证</th>
+              <th class="px-4 py-3 text-right font-mono font-normal">深证</th>
+              <th class="px-4 py-3 text-right font-mono font-normal">标普 500</th>
+              <th class="px-4 py-3 text-right font-mono font-normal">纳指</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              [...sorted].reverse().map((s) => (
+                <tr class="border-b border-border-soft transition-colors hover:bg-bg-tertiary/60">
+                  <td class="px-4 py-2.5 font-mono text-xs text-text-tertiary">{s.date}</td>
+                  <td class="px-4 py-2.5 text-right font-mono tabular-nums text-text-primary">
+                    {s.shIndex != null ? s.shIndex.toFixed(2) : '—'}
+                  </td>
+                  <td class="px-4 py-2.5 text-right font-mono tabular-nums text-text-primary">
+                    {s.szIndex != null ? s.szIndex.toFixed(2) : '—'}
+                  </td>
+                  <td class="px-4 py-2.5 text-right font-mono tabular-nums text-text-primary">
+                    {s.sp500 != null ? s.sp500.toFixed(2) : '—'}
+                  </td>
+                  <td class="px-4 py-2.5 text-right font-mono tabular-nums text-text-primary">
+                    {s.nasdaq != null ? s.nasdaq.toFixed(2) : '—'}
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import {
+    Chart,
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    Tooltip,
+    Legend,
+    Filler,
+  } from 'chart.js';
+
+  Chart.register(
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    Tooltip,
+    Legend,
+    Filler,
+  );
+
+  // 数据从 build-time 注入的 data-* 属性读出
+  const root = document.getElementById('trend-chart-data');
+  if (!root) {
+    console.warn('[data] no chart data node');
+  } else {
+    const labels = JSON.parse(root.dataset.labels || '[]');
+    const sh  = JSON.parse(root.dataset.sh  || '[]');
+    const sz  = JSON.parse(root.dataset.sz  || '[]');
+    const sp  = JSON.parse(root.dataset.sp  || '[]');
+    const nas = JSON.parse(root.dataset.nas || '[]');
+
+    const canvas = document.getElementById('trend-chart');
+    const fallback = document.getElementById('trend-chart-fallback');
+    if (canvas && fallback) {
+      // 从 CSS 变量读取当前主题色，让图表跟随主题
+      const css = (name: string, fallback: string) =>
+        getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+      const accent       = css('--accent',         '#7AA2F7');
+      const buildingClr  = css('--status-building', '#E0AF68');
+      const onlineClr    = css('--status-online',   '#7DCFFF');
+      const experiment   = css('--status-experiment','#BB9AF7');
+      const textPrimary  = css('--text-primary',    '#C0CAF5');
+      const textTertiary = css('--text-tertiary',   '#565F89');
+      const border       = css('--border',          '#292E42');
+      const bgSecondary  = css('--bg-secondary',    '#16161E');
+      const hexToRgba = (hex: string, a: number) => {
+        const h = hex.replace('#','');
+        const r = parseInt(h.substring(0,2), 16);
+        const g = parseInt(h.substring(2,4), 16);
+        const b = parseInt(h.substring(4,6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
+      };
+      const gridColor = hexToRgba(border, 0.5);
+
+      try {
+        new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: '上证',
+                data: sh,
+                borderColor: accent,
+                backgroundColor: hexToRgba(accent, 0.10),
+                borderWidth: 2,
+                tension: 0.25,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: false,
+                yAxisID: 'y1',
+              },
+              {
+                label: '深证',
+                data: sz,
+                borderColor: buildingClr,
+                backgroundColor: hexToRgba(buildingClr, 0.10),
+                borderWidth: 2,
+                tension: 0.25,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: false,
+                yAxisID: 'y1',
+              },
+              {
+                label: '标普 500',
+                data: sp,
+                borderColor: onlineClr,
+                backgroundColor: hexToRgba(onlineClr, 0.10),
+                borderWidth: 2,
+                tension: 0.25,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: false,
+                yAxisID: 'y2',
+              },
+              {
+                label: '纳指',
+                data: nas,
+                borderColor: experiment,
+                backgroundColor: hexToRgba(experiment, 0.10),
+                borderWidth: 2,
+                tension: 0.25,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: false,
+                yAxisID: 'y2',
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: bgSecondary,
+                titleColor: textPrimary,
+                bodyColor: textPrimary,
+                borderColor: border,
+                borderWidth: 1,
+                padding: 10,
+                cornerRadius: 8,
+                titleFont: { family: 'JetBrains Mono', size: 11 },
+                bodyFont: { family: 'JetBrains Mono', size: 11 },
+              },
+            },
+            scales: {
+              x: {
+                type: 'category',
+                ticks: { color: textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
+                grid: { color: gridColor },
+              },
+              y1: {
+                type: 'linear',
+                position: 'left',
+                ticks: { color: textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
+                grid: { color: gridColor },
+              },
+              y2: {
+                type: 'linear',
+                position: 'right',
+                ticks: { color: textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
+                grid: { display: false },
+              },
+            },
+          },
+        });
+        fallback.style.display = 'none';
+      } catch (err) {
+        console.error('[data] chart 渲染失败', err);
+        fallback.textContent = '图表渲染失败：' + (err as Error).message;
+        fallback.classList.remove('hidden');
+      }
+    }
+  }
+</script>

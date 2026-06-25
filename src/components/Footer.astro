@@ -1,0 +1,17 @@
+---
+import { SITE } from '../consts';
+const year = new Date().getFullYear();
+---
+
+<footer class="mt-24 border-t border-border bg-bg-secondary/40">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-text-secondary sm:flex-row sm:px-8">
+    <p class="font-mono text-xs">
+      © {year} {SITE.name} · <span class="text-text-tertiary">an online drawer</span>
+    </p>
+    <p class="font-mono text-xs text-text-tertiary">
+      <a href="/rss.xml" class="hover:text-accent transition-colors">RSS</a>
+      <span class="mx-2 opacity-30">·</span>
+      <a href="/sitemap-index.xml" class="hover:text-accent transition-colors">Sitemap</a>
+    </p>
+  </div>
+</footer>

@@ -1,0 +1,58 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../consts';
+---
+
+<BaseLayout title="关于" description={`关于 ${SITE.name} - 一个网友虚拟身份下的作品集合`}>
+  <section class="mx-auto max-w-2xl px-5 py-20 sm:px-8 sm:py-28">
+    <p class="mb-6 font-mono text-xs uppercase tracking-[0.3em] text-accent">about</p>
+    <h1 class="font-display text-4xl leading-tight text-text-primary sm:text-5xl">
+      关于这个站
+    </h1>
+
+    <div class="prose-theme mt-10 max-w-none text-pretty">
+      <p class="text-lg">
+        <strong>栗子糕的BOX</strong> 是一个网友虚拟身份下的作品集合站。
+      </p>
+
+      <p>
+        这里没有个人介绍，没有真实信息，没有联系方式。
+        只有东西本身——做过的、做着的、打算做的小项目。
+        想到啥就做啥，做完往里一放；做砸了就翻篇。
+      </p>
+
+      <h2>抽屉里装着</h2>
+      <ul>
+        <li><strong>桌面应用</strong>：Excel 自动化、画手工具箱</li>
+        <li><strong>数据追踪</strong>：A 股 / 美股指数每日快照（GitHub Actions 自动抓）</li>
+        <li><strong>AI 实验</strong>：多智能体协作、提示词工程</li>
+        <li><strong>其它</strong>：随手的、不成型的、随时可能弃坑的</li>
+      </ul>
+
+      <h2>用的什么</h2>
+      <ul>
+        <li>静态站点：Astro 5 + Tailwind CSS</li>
+        <li>托管：Vercel（免费额度）</li>
+        <li>定时数据：GitHub Actions</li>
+        <li>图表：Chart.js（本地导入）</li>
+      </ul>
+
+      <h2>成本</h2>
+      <p>
+        <strong>¥0 / 年</strong>。域名用 <code>lizigao-box.vercel.app</code> 免费子域名，
+        Vercel 和 GitHub Actions 都跑在免费额度内。
+      </p>
+
+      <h2>这个站本身</h2>
+      <p>
+        也是这个"作品集合"里的一项——一个 0 成本作品集的实践样本。
+        后续会单独写一篇建站笔记。
+      </p>
+    </div>
+
+    <hr class="mt-12 mb-6 border-border" />
+    <p class="font-mono text-xs text-text-tertiary">
+      © {new Date().getFullYear()} {SITE.name}
+    </p>
+  </section>
+</BaseLayout>

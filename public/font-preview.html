@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="tokyo">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>栗子糕的BOX · 字体预览</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=ZCOOL+QingKe+HuangYou&family=ZCOOL+KuaiLe&family=Long+Cang&family=Ma+Shan+Zheng&family=Liu+Jian+Mao+Cao&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif:wght@400;700&family=Noto+Sans:wght@400;700&family=Source+Han+Serif+SC:wght@400;700&family=Source+Han+Sans+SC:wght@400;700&family=JetBrains+Mono&family=Ma+Shan+Zheng&family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=EB+Garamond:wght@400;700&family=Libre+Baskerville:wght@400;700&display=swap"
+    rel="stylesheet"
+  />
+  <meta name="theme-color" content="#1A1B26" />
+  <style>
+    :root {
+      --bg-primary: #1A1B26;
+      --bg-secondary: #16161E;
+      --bg-tertiary: #2F3549;
+      --border: #292E42;
+      --text-primary: #C0CAF5;
+      --text-secondary: #9AA5CE;
+      --text-tertiary: #565F89;
+      --accent: #7AA2F7;
+      --accent-hover: #9DBAF9;
+      --accent-soft: rgba(122, 162, 247, 0.14);
+      --accent-2: #BB9AF7;
+    }
+    [data-theme="snow"] {
+      --bg-primary: #ECEFF4;
+      --bg-secondary: #E5E9F0;
+      --bg-tertiary: #D8DEE9;
+      --border: #D8DEE9;
+      --text-primary: #2E3440;
+      --text-secondary: #4C566A;
+      --text-tertiary: #7B88A1;
+      --accent: #5E81AC;
+      --accent-hover: #4C66A0;
+      --accent-soft: rgba(94, 129, 172, 0.12);
+      --accent-2: #81A1C1;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: "Noto Sans SC", system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 40px 24px 80px;
+      transition: background 0.3s, color 0.3s;
+    }
+    .wrap { max-width: 1280px; margin: 0 auto; }
+    header {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 24px; flex-wrap: wrap;
+      margin-bottom: 24px; padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1.page-title {
+      font-size: 32px; margin: 0; letter-spacing: 0.5px;
+    }
+    .sub { color: var(--text-secondary); font-size: 14px; margin-top: 6px; }
+    .toolbar {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .theme-btn {
+      width: 28px; height: 28px; border-radius: 999px;
+      border: 1px solid var(--border); cursor: pointer; background: transparent;
+      transition: transform 0.15s;
+    }
+    .theme-btn:hover { transform: scale(1.08); }
+    .theme-btn.t-tokyo { background: linear-gradient(135deg, #1A1B26 50%, #7AA2F7 50%); }
+    .theme-btn.t-nord  { background: linear-gradient(135deg, #2E3440 50%, #88C0D0 50%); }
+    .theme-btn.t-snow  { background: linear-gradient(135deg, #ECEFF4 50%, #5E81AC 50%); }
+    .theme-btn.active { box-shadow: 0 0 0 2px var(--accent); }
+    .counter {
+      font-size: 12px; padding: 4px 10px; border-radius: 999px;
+      background: var(--bg-tertiary); color: var(--text-secondary);
+      margin-left: 8px;
+    }
+    .counter.has { background: var(--accent-soft); color: var(--accent); }
+    .info {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px; margin-bottom: 28px;
+      color: var(--text-secondary);
+      font-size: 13px; line-height: 1.6;
+    }
+    .info strong { color: var(--accent); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card.is-chosen {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 8px 24px var(--accent-soft);
+    }
+    .chosen-tag {
+      position: absolute; top: 12px; right: 12px;
+      font-size: 10px; padding: 2px 8px; border-radius: 999px;
+      background: var(--accent); color: var(--bg-primary);
+      font-weight: 600; letter-spacing: 0.5px;
+    }
+    .chosen-tag.hidden { display: none; }
+    .meta-row {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .badge {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 8px; border-radius: 4px;
+      background: var(--bg-tertiary); color: var(--accent);
+    }
+    .font-name {
+      font-size: 11px; color: var(--text-tertiary);
+      font-family: "JetBrains Mono", monospace;
+    }
+    .preview-title {
+      font-size: 44px; line-height: 1.05; letter-spacing: 0.5px;
+      color: var(--text-primary);
+      word-break: keep-all;
+    }
+    .preview-title .accent { color: var(--accent-2); }
+    .preview-sub {
+      font-size: 12px; color: var(--text-tertiary);
+      font-family: "JetBrains Mono", monospace;
+      margin-top: 4px;
+    }
+    .class-tag {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; color: var(--text-secondary);
+      padding: 4px 8px; border-radius: 4px;
+      background: var(--bg-tertiary);
+      display: inline-block; margin-top: auto;
+    }
+    /* 各字体预设 */
+    .f-1 { font-family: "ZCOOL XiaoWei", "Noto Serif SC", Georgia, serif; }
+    .f-2 { font-family: "Noto Serif SC", Georgia, serif; font-weight: 700; }
+    .f-3 { font-family: "Noto Serif SC", Georgia, serif; font-weight: 400; }
+    .f-4 { font-family: "Noto Sans SC", system-ui, sans-serif; font-weight: 700; }
+    .f-5 { font-family: "Noto Sans SC", system-ui, sans-serif; font-weight: 300; }
+    .f-6 { font-family: Georgia, "Times New Roman", serif; font-weight: 700; }
+    .f-7 { font-family: "Times New Roman", Times, serif; font-weight: 700; }
+    .f-8 { font-family: "Source Han Serif SC", "Noto Serif SC", serif; font-weight: 700; }
+    .f-9 { font-family: "Source Han Sans SC", "Noto Sans SC", sans-serif; font-weight: 700; }
+    .f-10 { font-family: "ZCOOL QingKe HuangYou", "ZCOOL XiaoWei", serif; }
+    .f-11 { font-family: "ZCOOL KuaiLe", "ZCOOL XiaoWei", cursive; }
+    .f-12 { font-family: "Ma Shan Zheng", "Noto Serif SC", cursive; }
+    .f-13 { font-family: "Long Cang", "Noto Serif SC", cursive; }
+    .f-14 { font-family: "Liu Jian Mao Cao", "Noto Serif SC", cursive; }
+    .f-15 { font-family: "Cinzel", Georgia, serif; font-weight: 700; }
+    .f-16 { font-family: "Playfair Display", Georgia, serif; font-weight: 700; }
+    .f-17 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 700; }
+    .f-18 { font-family: "EB Garamond", Georgia, serif; font-weight: 700; }
+    .f-19 { font-family: "Libre Baskerville", Georgia, serif; font-weight: 700; }
+    .f-20 { font-family: STSong, "SimSun", "宋体", "Noto Serif SC", serif; font-weight: 700; }
+    .f-21 { font-family: KaiTi, "STKaiti", "楷体", cursive; }
+    .f-22 { font-family: "STKaiti", "KaiTi", "楷体", cursive; font-weight: 700; }
+    .f-23 { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; font-weight: 700; }
+    .f-24 { font-family: SimHei, "黑体", sans-serif; font-weight: 700; }
+    .f-25 { font-family: "JetBrains Mono", monospace; font-weight: 700; }
+    .f-26 { font-family: "Noto Serif SC", serif; font-weight: 600; }
+    .f-27 { font-family: "Noto Serif", serif; font-weight: 700; }
+    .f-28 { font-family: serif; font-weight: 700; }
+    .f-29 { font-family: sans-serif; font-weight: 700; }
+    .f-30 { font-family: system-ui, -apple-system, sans-serif; font-weight: 700; }
+    .actions {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 12px; align-items: center;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--accent);
+      border-radius: 999px; padding: 10px 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      z-index: 100;
+    }
+    .actions .pick-label { color: var(--text-secondary); font-size: 13px; }
+    .actions .pick-name { color: var(--accent); font-weight: 600; font-size: 14px; }
+    .actions .copy-btn {
+      background: var(--accent); color: var(--bg-primary);
+      border: none; padding: 6px 14px; border-radius: 999px;
+      font-size: 12px; cursor: pointer; font-weight: 600;
+    }
+    .actions .copy-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .group-title {
+      grid-column: 1 / -1;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      padding: 8px 0 4px;
+      margin-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+    .group-title:first-child { border-top: none; margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1 class="page-title">栗子糕的 BOX · 标题字体预览</h1>
+        <div class="sub">点击任意卡片选择，复制 CSS 类名给 Assistant</div>
+      </div>
+      <div class="toolbar">
+        <span class="counter" id="counter">已选 0 / 1</span>
+        <button class="theme-btn t-tokyo active" data-t="tokyo" title="Tokyo"></button>
+        <button class="theme-btn t-nord" data-t="nord" title="Nord"></button>
+        <button class="theme-btn t-snow" data-t="snow" title="Snow"></button>
+      </div>
+    </header>
+
+    <div class="info">
+      <strong>使用说明：</strong>点击喜欢的卡片会高亮标记，右下角会显示选中的字体 class 名。
+      切换主题可以查看在不同配色下的效果。
+      复制 class 名（如 <code>font-display</code> / <code>font-serif</code> / 自定义）告诉我，我直接改代码。
+    </div>
+
+    <div class="grid" id="grid">
+      <div class="group-title">A · 当前项目里用过的</div>
+
+      <div class="card" data-class="font-display">
+        <div class="meta-row">
+          <span class="badge">A1</span>
+          <span class="font-name">font-display · ZCOOL XiaoWei</span>
+        </div>
+        <div class="preview-title f-1">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">初版使用 · 装饰感手写风（Google Font）</div>
+        <span class="class-tag">class="font-display"</span>
+      </div>
+
+      <div class="card" data-class="font-serif">
+        <div class="meta-row">
+          <span class="badge">A2</span>
+          <span class="font-name">font-serif · Noto Serif SC 700</span>
+        </div>
+        <div class="preview-title f-2">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">昨天改错用过 · 厚实衬线 bold</div>
+        <span class="class-tag">class="font-serif"</span>
+      </div>
+
+      <div class="card" data-class="font-serif-regular">
+        <div class="meta-row">
+          <span class="badge">A3</span>
+          <span class="font-name">Noto Serif SC 400 (regular)</span>
+        </div>
+        <div class="preview-title f-3">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">细一号衬线 · 优雅</div>
+        <span class="class-tag">class="font-serif" + font-normal</span>
+      </div>
+
+      <div class="group-title">B · 中文衬线</div>
+
+      <div class="card" data-class="noto-serif-600">
+        <div class="meta-row">
+          <span class="badge">B1</span>
+          <span class="font-name">Noto Serif SC 600 (semibold)</span>
+        </div>
+        <div class="preview-title f-26">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">介于粗细之间 · 现代书卷气</div>
+        <span class="class-tag">style="font-family: 'Noto Serif SC'; font-weight: 600"</span>
+      </div>
+
+      <div class="card" data-class="source-han-serif">
+        <div class="meta-row">
+          <span class="badge">B2</span>
+          <span class="font-name">Source Han Serif SC 700</span>
+        </div>
+        <div class="preview-title f-8">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">思源宋体 · Adobe 官方</div>
+        <span class="class-tag">style="font-family: 'Source Han Serif SC', serif; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="stsong">
+        <div class="meta-row">
+          <span class="badge">B3</span>
+          <span class="font-name">STSong / SimSun 宋体</span>
+        </div>
+        <div class="preview-title f-20">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">macOS STSong · Windows SimSun · 传统宋体</div>
+        <span class="class-tag">style="font-family: STSong, '宋体', serif"</span>
+      </div>
+
+      <div class="card" data-class="kaiti">
+        <div class="meta-row">
+          <span class="badge">B4</span>
+          <span class="font-name">KaiTi 楷体 (regular)</span>
+        </div>
+        <div class="preview-title f-21">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">楷书 · 手写感强</div>
+        <span class="class-tag">style="font-family: KaiTi, '楷体', cursive"</span>
+      </div>
+
+      <div class="card" data-class="stkaiti">
+        <div class="meta-row">
+          <span class="badge">B5</span>
+          <span class="font-name">STKaiti 楷体 bold</span>
+        </div>
+        <div class="preview-title f-22">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">加粗楷书 · 复古刊物感</div>
+        <span class="class-tag">style="font-family: STKaiti, cursive; font-weight: 700"</span>
+      </div>
+
+      <div class="group-title">C · 中文无衬线（黑体类）</div>
+
+      <div class="card" data-class="noto-sans-bold">
+        <div class="meta-row">
+          <span class="badge">C1</span>
+          <span class="font-name">Noto Sans SC 700</span>
+        </div>
+        <div class="preview-title f-4">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">现代无衬线 · 干净</div>
+        <span class="class-tag">class="font-sans" + font-bold</span>
+      </div>
+
+      <div class="card" data-class="noto-sans-light">
+        <div class="meta-row">
+          <span class="badge">C2</span>
+          <span class="font-name">Noto Sans SC 300</span>
+        </div>
+        <div class="preview-title f-5">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">极细无衬线 · 极简</div>
+        <span class="class-tag">style="font-family: 'Noto Sans SC'; font-weight: 300"</span>
+      </div>
+
+      <div class="card" data-class="source-han-sans">
+        <div class="meta-row">
+          <span class="badge">C3</span>
+          <span class="font-name">Source Han Sans SC 700</span>
+        </div>
+        <div class="preview-title f-9">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">思源黑体 · Adobe 官方</div>
+        <span class="class-tag">style="font-family: 'Source Han Sans SC', sans-serif; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="yahei">
+        <div class="meta-row">
+          <span class="badge">C4</span>
+          <span class="font-name">Microsoft YaHei 微软雅黑</span>
+        </div>
+        <div class="preview-title f-23">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">Windows 默认</div>
+        <span class="class-tag">style="font-family: 'Microsoft YaHei'"</span>
+      </div>
+
+      <div class="card" data-class="simhei">
+        <div class="meta-row">
+          <span class="badge">C5</span>
+          <span class="font-name">SimHei 黑体</span>
+        </div>
+        <div class="preview-title f-24">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">最粗黑体 · 强对比</div>
+        <span class="class-tag">style="font-family: SimHei, '黑体'"</span>
+      </div>
+
+      <div class="group-title">D · 装饰 / 手写</div>
+
+      <div class="card" data-class="zcool-qingke">
+        <div class="meta-row">
+          <span class="badge">D1</span>
+          <span class="font-name">ZCOOL QingKe HuangYou</span>
+        </div>
+        <div class="preview-title f-10">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">站酷庆科黄油体 · 圆润</div>
+        <span class="class-tag">style="font-family: 'ZCOOL QingKe HuangYou'"</span>
+      </div>
+
+      <div class="card" data-class="zcool-kuaile">
+        <div class="meta-row">
+          <span class="badge">D2</span>
+          <span class="font-name">ZCOOL KuaiLe 快乐体</span>
+        </div>
+        <div class="preview-title f-11">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">站酷快乐体 · 卡通风</div>
+        <span class="class-tag">style="font-family: 'ZCOOL KuaiLe'"</span>
+      </div>
+
+      <div class="card" data-class="ma-shan">
+        <div class="meta-row">
+          <span class="badge">D3</span>
+          <span class="font-name">Ma Shan Zheng 马善政毛笔</span>
+        </div>
+        <div class="preview-title f-12">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">毛笔楷书 · 中国风</div>
+        <span class="class-tag">style="font-family: 'Ma Shan Zheng'"</span>
+      </div>
+
+      <div class="card" data-class="long-cang">
+        <div class="meta-row">
+          <span class="badge">D4</span>
+          <span class="font-name">Long Cang 龙藏</span>
+        </div>
+        <div class="preview-title f-13">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">草书 · 飘逸</div>
+        <span class="class-tag">style="font-family: 'Long Cang'"</span>
+      </div>
+
+      <div class="card" data-class="liu-jian">
+        <div class="meta-row">
+          <span class="badge">D5</span>
+          <span class="font-name">Liu Jian Mao Cao 刘建毛草</span>
+        </div>
+        <div class="preview-title f-14">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">狂草 · 极致手写</div>
+        <span class="class-tag">style="font-family: 'Liu Jian Mao Cao'"</span>
+      </div>
+
+      <div class="group-title">E · 西文衬线（BOX 部分会更明显）</div>
+
+      <div class="card" data-class="georgia">
+        <div class="meta-row">
+          <span class="badge">E1</span>
+          <span class="font-name">Georgia 700</span>
+        </div>
+        <div class="preview-title f-6">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">西文衬线 · BOX 厚重</div>
+        <span class="class-tag">style="font-family: Georgia; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="times">
+        <div class="meta-row">
+          <span class="badge">E2</span>
+          <span class="font-name">Times New Roman 700</span>
+        </div>
+        <div class="preview-title f-7">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">经典报纸衬线</div>
+        <span class="class-tag">style="font-family: 'Times New Roman'; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="playfair">
+        <div class="meta-row">
+          <span class="badge">E3</span>
+          <span class="font-name">Playfair Display 700</span>
+        </div>
+        <div class="preview-title f-16">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">现代高对比衬线</div>
+        <span class="class-tag">style="font-family: 'Playfair Display'; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="cinzel">
+        <div class="meta-row">
+          <span class="badge">E4</span>
+          <span class="font-name">Cinzel 700</span>
+        </div>
+        <div class="preview-title f-15">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">罗马体 · 古典</div>
+        <span class="class-tag">style="font-family: Cinzel; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="cormorant">
+        <div class="meta-row">
+          <span class="badge">E5</span>
+          <span class="font-name">Cormorant Garamond 700</span>
+        </div>
+        <div class="preview-title f-17">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">细高对比 · 优雅</div>
+        <span class="class-tag">style="font-family: 'Cormorant Garamond'; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="eb-garamond">
+        <div class="meta-row">
+          <span class="badge">E6</span>
+          <span class="font-name">EB Garamond 700</span>
+        </div>
+        <div class="preview-title f-18">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">经典 Garamond 复刻</div>
+        <span class="class-tag">style="font-family: 'EB Garamond'; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="baskerville">
+        <div class="meta-row">
+          <span class="badge">E7</span>
+          <span class="font-name">Libre Baskerville 700</span>
+        </div>
+        <div class="preview-title f-19">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">经典 Baskerville</div>
+        <span class="class-tag">style="font-family: 'Libre Baskerville'; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="noto-serif-latin">
+        <div class="meta-row">
+          <span class="badge">E8</span>
+          <span class="font-name">Noto Serif 700 (Latin)</span>
+        </div>
+        <div class="preview-title f-27">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">纯西文 Noto Serif</div>
+        <span class="class-tag">style="font-family: 'Noto Serif'; font-weight: 700"</span>
+      </div>
+
+      <div class="group-title">F · 等宽 / 系统默认</div>
+
+      <div class="card" data-class="jetbrains">
+        <div class="meta-row">
+          <span class="badge">F1</span>
+          <span class="font-name">JetBrains Mono 700</span>
+        </div>
+        <div class="preview-title f-25">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">等宽 · 程序员</div>
+        <span class="class-tag">class="font-mono"</span>
+      </div>
+
+      <div class="card" data-class="serif-default">
+        <div class="meta-row">
+          <span class="badge">F2</span>
+          <span class="font-name">浏览器默认 serif 700</span>
+        </div>
+        <div class="preview-title f-28">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">fallback</div>
+        <span class="class-tag">style="font-family: serif; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="sans-default">
+        <div class="meta-row">
+          <span class="badge">F3</span>
+          <span class="font-name">浏览器默认 sans 700</span>
+        </div>
+        <div class="preview-title f-29">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">fallback</div>
+        <span class="class-tag">style="font-family: sans-serif; font-weight: 700"</span>
+      </div>
+
+      <div class="card" data-class="system-ui">
+        <div class="meta-row">
+          <span class="badge">F4</span>
+          <span class="font-name">system-ui 700</span>
+        </div>
+        <div class="preview-title f-30">栗子糕的<br /><span class="accent">BOX</span></div>
+        <div class="preview-sub">跟随系统</div>
+        <span class="class-tag">style="font-family: system-ui; font-weight: 700"</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <span class="pick-label">已选：</span>
+    <span class="pick-name" id="pick-name">（无）</span>
+    <button class="copy-btn" id="copy-btn" disabled>复制 class 名</button>
+  </div>
+
+  <script>
+    (() => {
+      const cards = document.querySelectorAll('.card');
+      const counter = document.getElementById('counter');
+      const pickName = document.getElementById('pick-name');
+      const copyBtn = document.getElementById('copy-btn');
+      let chosen = null;
+
+      cards.forEach((card) => {
+        card.addEventListener('click', () => {
+          cards.forEach((c) => {
+            c.classList.remove('is-chosen');
+            const tag = c.querySelector('.chosen-tag');
+            if (tag) tag.classList.add('hidden');
+          });
+          card.classList.add('is-chosen');
+          let tag = card.querySelector('.chosen-tag');
+          if (!tag) {
+            tag = document.createElement('div');
+            tag.className = 'chosen-tag';
+            tag.textContent = '已选';
+            card.appendChild(tag);
+          }
+          tag.classList.remove('hidden');
+          chosen = card.getAttribute('data-class') || card.querySelector('.class-tag')?.textContent;
+          pickName.textContent = chosen;
+          counter.textContent = '已选 1 / 1';
+          counter.classList.add('has');
+          copyBtn.disabled = false;
+        });
+      });
+
+      copyBtn.addEventListener('click', async () => {
+        if (!chosen) return;
+        try {
+          await navigator.clipboard.writeText(chosen);
+          copyBtn.textContent = '已复制 ✓';
+          setTimeout(() => (copyBtn.textContent = '复制 class 名'), 1500);
+        } catch (e) {
+          alert('复制失败，请手动选择文字');
+        }
+      });
+
+      // 主题切换
+      const themeBtns = document.querySelectorAll('.theme-btn');
+      themeBtns.forEach((b) => {
+        b.addEventListener('click', () => {
+          themeBtns.forEach((x) => x.classList.remove('active'));
+          b.classList.add('active');
+          const t = b.getAttribute('data-t');
+          document.documentElement.setAttribute('data-theme', t);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

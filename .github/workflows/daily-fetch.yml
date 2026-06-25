@@ -1,0 +1,57 @@
+name: Daily Financial Snapshots
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 每天 UTC 8:00（北京时间 16:00）抓取
+  workflow_dispatch:       # 允许手动触发
+
+jobs:
+  fetch-snapshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Fetch real historical data
+        run: |
+          python scripts/fetch_real_history.py
+          python scripts/fetch_snapshots.py
+
+      - name: Verify output
+        run: |
+          echo "=== financial-snapshots.json ==="
+          cat src/data/financial-snapshots.json | head -50
+          echo ""
+          echo "=== File size ==="
+          ls -lh src/data/financial-snapshots.json
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n "$(git status --porcelain src/data/)" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✓ 检测到新数据，准备提交"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "无新数据，跳过提交"
+          fi
+
+      - name: Commit & push
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/financial-snapshots.json
+          git commit -m "chore(data): 每日自动抓取 [skip ci]
+
+          - 上证指数 / 深证成指 / 标普 500 / 纳斯达克
+          - 由 GitHub Actions 定时任务自动更新
+          - 时间戳: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          git push

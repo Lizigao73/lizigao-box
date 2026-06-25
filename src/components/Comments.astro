@@ -1,0 +1,94 @@
+---
+// src/components/Comments.astro
+// Giscus 评论组件（基于 GitHub Discussions）
+// 主题跟网站主题联动
+// 配置在 src/consts.ts 的 GISCUS 常量中
+import { GISCUS } from '../consts';
+
+interface Props {
+  /** 评论区 slug（默认当前路径） */
+  slug?: string;
+}
+
+const slug = Astro.props.slug || Astro.url.pathname;
+const isConfigured =
+  GISCUS.repoId !== 'R_PLACEHOLDER' && GISCUS.categoryId !== 'DIC_PLACEHOLDER';
+---
+
+<section class="mt-16 border-t border-[var(--border)] pt-12">
+  <h2 class="font-display text-2xl font-semibold mb-6">💬 留言</h2>
+
+  {isConfigured ? (
+    <script
+      src="https://giscus.app/client.js"
+      data-repo={GISCUS.repo}
+      data-repo-id={GISCUS.repoId}
+      data-category={GISCUS.category}
+      data-category-id={GISCUS.categoryId}
+      data-mapping="specific"
+      data-term={slug}
+      data-strict="0"
+      data-reactions-enabled="1"
+      data-emit-metadata="0"
+      data-input-position="top"
+      data-theme="preferred_color_scheme"
+      data-lang="zh-CN"
+      data-loading="lazy"
+      crossorigin="anonymous"
+      async
+    />
+
+    <noscript>
+      <p class="text-sm text-[var(--text-secondary)]">
+        请启用 JavaScript 以查看评论（基于 GitHub Discussions）
+      </p>
+    </noscript>
+  ) : (
+    <div class="rounded-card border border-dashed border-[var(--border)] bg-[var(--bg-secondary)]/30 p-6 text-sm text-[var(--text-secondary)]">
+      <p class="font-semibold text-[var(--text-primary)]">评论未启用</p>
+      <p class="mt-2 leading-relaxed">
+        在 <code class="font-mono text-xs text-[var(--accent)]">src/consts.ts</code> 的
+        <code class="font-mono text-xs text-[var(--accent)]">GISCUS</code>
+        常量里填入 <a class="underline" href="https://giscus.app/zh-CN" target="_blank" rel="noopener">giscus.app</a>
+        生成的 <code class="font-mono text-xs">repoId</code> 和 <code class="font-mono text-xs">categoryId</code> 即可启用。
+      </p>
+    </div>
+  )}
+</section>
+
+<script>
+  // 主题切换时同步 Giscus 主题
+  const themeMap = {
+    tokyo: 'dark_dimmed',
+    nord:  'light',
+    snow:  'light',
+  };
+
+  function updateGiscusTheme(theme) {
+    const giscusTheme = themeMap[theme] || 'preferred_color_scheme';
+    const iframe = document.querySelector('iframe.giscus-frame');
+    if (iframe) {
+      iframe.contentWindow.postMessage(
+        { giscus: { setConfig: { theme: giscusTheme } } },
+        'https://giscus.app'
+      );
+    }
+  }
+
+  // 监听主题切换
+  const observer = new MutationObserver(() => {
+    const theme = document.documentElement.getAttribute('data-theme');
+    if (theme) updateGiscusTheme(theme);
+  });
+
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+
+  // 初始主题
+  document.addEventListener('DOMContentLoaded', () => {
+    const theme = document.documentElement.getAttribute('data-theme') || 'tokyo';
+    updateGiscusTheme(theme);
+  });
+</script>

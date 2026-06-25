@@ -1,0 +1,137 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import FilterBar from '../components/FilterBar.astro';
+import HeroClock from '../components/HeroClock.astro';
+import { SITE } from '../consts';
+
+const allProjects = await getCollection('projects');
+const projects = allProjects.sort((a, b) => {
+  // featured 排前，然后按 order 升序，最后按 startDate 降序
+  if (a.data.featured !== b.data.featured) {
+    return a.data.featured ? -1 : 1;
+  }
+  if (a.data.order !== b.data.order) {
+    return a.data.order - b.data.order;
+  }
+  return b.data.startDate.getTime() - a.data.startDate.getTime();
+});
+
+const stats = {
+  total: allProjects.length,
+  shipped: allProjects.filter((p) => p.data.status === 'shipped').length,
+  building: allProjects.filter((p) => p.data.status === 'building').length,
+  online: allProjects.filter((p) => p.data.status === 'online').length,
+  experiment: allProjects.filter((p) => p.data.status === 'experiment').length,
+};
+---
+
+<BaseLayout title={undefined} description={SITE.description}>
+  <!-- Hero -->
+  <section class="mx-auto max-w-6xl px-5 pt-16 pb-12 sm:px-8 sm:pt-24 sm:pb-16">
+    <div class="grid items-end gap-6 sm:grid-cols-[1fr_auto]">
+      <div>
+        <p class="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-accent">
+          <span class="mr-2 inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full bg-accent align-middle animate-pulse-slow"></span>
+          a quiet drawer · 一只抽屉
+        </p>
+        <h1 class="font-display text-5xl leading-[1.05] tracking-wide text-text-primary sm:text-7xl">
+          栗子糕的<br /><span class="text-accent">BOX</span>
+        </h1>
+        <p class="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-text-secondary sm:text-lg">
+          一个<strong class="text-text-primary">网友虚拟身份</strong>下的小抽屉——
+          放些做过的、做着的、打算做的小东西。想到啥就做啥，做完往里一放。
+          <span class="text-text-tertiary">没有自我介绍，没有真名实姓——只有东西本身。</span>
+        </p>
+      </div>
+      <div class="flex flex-col items-start gap-1 sm:items-end">
+        <HeroClock />
+        <p class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">
+          drawer open · {stats.total} items inside
+        </p>
+      </div>
+    </div>
+
+    <!-- 数据条 -->
+    <div class="mt-12 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div class="rounded-card border border-border bg-bg-secondary/60 px-4 py-3 transition-colors hover:border-status-shipped/40">
+        <p class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">shipped</p>
+        <p class="mt-1 font-serif text-2xl text-status-shipped">{stats.shipped}</p>
+      </div>
+      <div class="rounded-card border border-border bg-bg-secondary/60 px-4 py-3 transition-colors hover:border-status-building/40">
+        <p class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">building</p>
+        <p class="mt-1 font-serif text-2xl text-status-building">{stats.building}</p>
+      </div>
+      <div class="rounded-card border border-border bg-bg-secondary/60 px-4 py-3 transition-colors hover:border-status-online/40">
+        <p class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">online</p>
+        <p class="mt-1 font-serif text-2xl text-status-online">{stats.online}</p>
+      </div>
+      <div class="rounded-card border border-border bg-bg-secondary/60 px-4 py-3 transition-colors hover:border-status-experiment/40">
+        <p class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">experiment</p>
+        <p class="mt-1 font-serif text-2xl text-status-experiment">{stats.experiment}</p>
+      </div>
+    </div>
+
+    <!-- 下载入口 -->
+    <a
+      href="/downloads"
+      class="group mt-6 flex items-center justify-between gap-4 rounded-card border border-accent/30 bg-accent/5 px-5 py-4 transition-all hover:border-accent/60 hover:bg-accent/10"
+    >
+      <div class="flex items-center gap-4">
+        <div class="grid h-11 w-11 place-items-center rounded-xl bg-accent/15 text-accent">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-serif text-base font-semibold text-text-primary">下载中心</p>
+          <p class="text-xs text-text-secondary">桌面应用最新版本 · Windows 10/11 64-bit · 含 SHA256 校验</p>
+        </div>
+      </div>
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary transition-transform group-hover:translate-x-1 group-hover:text-accent">
+        <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+      </svg>
+    </a>
+  </section>
+
+  <!-- 项目区 -->
+  <section id="projects" class="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
+    <header class="mb-6 flex items-baseline justify-between">
+      <h2 class="font-serif text-2xl font-semibold text-text-primary">
+        Projects
+        <span class="ml-2 font-mono text-sm text-text-tertiary">/ 项目</span>
+      </h2>
+      <a
+        href="/data"
+        class="group inline-flex items-center gap-1.5 text-sm text-text-secondary transition-colors hover:text-accent"
+      >
+        <span>数据追踪</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:translate-x-0.5">
+          <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+        </svg>
+      </a>
+    </header>
+
+    <div class="mb-8">
+      <FilterBar activeStatus="all" activeCategories={['all']} />
+    </div>
+
+    {
+      projects.length === 0 ? (
+        <div class="rounded-card border border-dashed border-border-soft bg-bg-secondary/40 p-12 text-center">
+          <p class="font-serif text-lg text-text-secondary">还没有项目</p>
+          <p class="mt-2 text-sm text-text-tertiary">稍后再来看看</p>
+        </div>
+      ) : (
+        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project, i) => (
+            <ProjectCard project={project} index={i} />
+          ))}
+        </div>
+      )
+    }
+  </section>
+</BaseLayout>

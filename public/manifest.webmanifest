@@ -1,0 +1,17 @@
+{
+  "name": "栗子糕的BOX",
+  "short_name": "栗子糕BOX",
+  "description": "一个网友虚拟身份下的作品集合 —— 桌面应用、数据追踪、AI 实验。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1A1B26",
+  "theme_color": "#1A1B26",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

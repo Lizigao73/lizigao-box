@@ -1,0 +1,76 @@
+---
+// 主题切换器：3 套主题 · 平铺色块
+// 通过 data-theme-target 点击切换，写入 localStorage
+
+const themes = [
+  { id: 'tokyo', label: 'Tokyo', swatch: 'linear-gradient(135deg, #1A1B26 50%, #7AA2F7 50%)' },
+  { id: 'nord',  label: 'Nord',  swatch: 'linear-gradient(135deg, #2E3440 50%, #88C0D0 50%)' },
+  { id: 'snow',  label: 'Snow',  swatch: 'linear-gradient(135deg, #ECEFF4 50%, #5E81AC 50%)' },
+];
+---
+
+<div
+  class="theme-switcher inline-flex items-center gap-0.5 rounded-pill border border-border bg-bg-secondary/80 p-1 backdrop-blur"
+  role="radiogroup"
+  aria-label="切换主题"
+>
+  {themes.map((t, i) => (
+    <button
+      type="button"
+      role="radio"
+      aria-checked="false"
+      data-theme-target={t.id}
+      title={t.label}
+      class:list={[
+        'group/switch relative inline-flex h-7 w-7 items-center justify-center rounded-pill transition-transform hover:scale-110',
+      ]}
+    >
+      <span
+        class="block h-4 w-4 rounded-full ring-1 ring-border transition-all group-hover/switch:ring-accent"
+        style={`background: ${t.swatch};`}
+        aria-hidden="true"
+      />
+      <span class="sr-only">{t.label}</span>
+    </button>
+  ))}
+</div>
+
+<script is:inline>
+  (() => {
+    const switcher = document.querySelector('.theme-switcher');
+    if (!switcher) return;
+    const buttons = switcher.querySelectorAll('[data-theme-target]');
+
+    const setActive = (theme) => {
+      buttons.forEach((b) => {
+        const isActive = b.getAttribute('data-theme-target') === theme;
+        b.setAttribute('aria-checked', String(isActive));
+        b.classList.toggle('is-active', isActive);
+        const ring = b.querySelector('span[aria-hidden="true"]');
+        if (ring) {
+          ring.classList.toggle('ring-2', isActive);
+          ring.classList.toggle('ring-accent', isActive);
+        }
+      });
+    };
+
+    const current = document.documentElement.getAttribute('data-theme') || 'tokyo';
+    setActive(current);
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const theme = btn.getAttribute('data-theme-target');
+        if (!theme) return;
+        document.documentElement.setAttribute('data-theme', theme);
+        try { localStorage.setItem('lizigao-box-theme', theme); } catch (_) {}
+        setActive(theme);
+        // 同步 theme-color meta
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          const bg = getComputedStyle(document.body).backgroundColor;
+          meta.setAttribute('content', bg);
+        }
+      });
+    });
+  })();
+</script>

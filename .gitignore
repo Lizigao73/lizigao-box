@@ -1,0 +1,40 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+*.log
+build.stderr.log
+build.stdout.log
+build2.log
+dev.stderr.log
+dev.stdout.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.production
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# misc
+apparent-apogee/
+.netlify/
+.cache/
+.tmp/

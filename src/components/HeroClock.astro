@@ -1,0 +1,40 @@
+---
+// 实时时间组件：用 inline JS 渲染，避免 hydration 成本
+---
+
+<div
+  id="hero-clock"
+  class="inline-flex items-baseline gap-2 font-mono text-sm text-text-secondary tabular-nums"
+  data-timezone="Asia/Shanghai"
+  aria-live="polite"
+>
+  <span data-clock-time>--:--:--</span>
+  <span data-clock-tz class="text-xs text-text-tertiary">Asia/Shanghai</span>
+</div>
+
+<script is:inline>
+  (() => {
+    const root = document.getElementById('hero-clock');
+    if (!root) return;
+    const timeEl = root.querySelector('[data-clock-time]');
+    const tzEl = root.querySelector('[data-clock-tz]');
+    if (!timeEl) return;
+
+    const fmt = (d) => {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
+
+    const update = () => {
+      const now = new Date();
+      timeEl.textContent = fmt(now);
+      if (tzEl) {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        tzEl.textContent = tz;
+      }
+    };
+
+    update();
+    setInterval(update, 1000);
+  })();
+</script>

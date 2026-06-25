@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <!-- Tokyo / Nord / Snow 主题：深色背景 + 浅色栗字 -->
+    <linearGradient id="g-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7AA2F7"/>
+      <stop offset="100%" stop-color="#5E81AC"/>
+    </linearGradient>
+    <!-- Snow 主题：浅色背景 + 深色栗字（用 prefers-color-scheme 切换） -->
+    <linearGradient id="g-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ECEFF4"/>
+      <stop offset="100%" stop-color="#D8DEE9"/>
+    </linearGradient>
+  </defs>
+  <!-- 圆角方块 -->
+  <rect id="bg" width="64" height="64" rx="14"/>
+  <!-- 栗子 + 糕字简化（单字"栗"） -->
+  <text
+    x="32" y="46"
+    text-anchor="middle"
+    font-family="'ZCOOL XiaoWei', 'Noto Serif SC', 'Songti SC', Georgia, serif"
+    font-size="40"
+    font-weight="600"
+    id="ch"
+  >栗</text>
+  <style>
+    /* 默认深色 */
+    #bg { fill: url(#g-dark); }
+    #ch { fill: #ECEFF4; }
+    /* 用户偏好浅色 → 翻转 */
+    @media (prefers-color-scheme: light) {
+      #bg { fill: url(#g-light); }
+      #ch { fill: #2E3440; }
+    }
+  </style>
+</svg>
