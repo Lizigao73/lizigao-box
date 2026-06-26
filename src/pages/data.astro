@@ -213,7 +213,7 @@ const source = data.source;
     const sp  = JSON.parse(root.dataset.sp  || '[]');
     const nas = JSON.parse(root.dataset.nas || '[]');
 
-    const canvas = document.getElementById('trend-chart');
+    const canvas = document.getElementById('trend-chart') as HTMLCanvasElement | null;
     const fallback = document.getElementById('trend-chart-fallback');
     if (canvas && fallback) {
       // 从 CSS 变量读取当前主题色，让图表跟随主题

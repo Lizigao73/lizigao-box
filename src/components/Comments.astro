@@ -58,16 +58,16 @@ const isConfigured =
 
 <script>
   // 主题切换时同步 Giscus 主题
-  const themeMap = {
+  const themeMap: Record<string, string> = {
     tokyo: 'dark_dimmed',
     nord:  'light',
     snow:  'light',
   };
 
-  function updateGiscusTheme(theme) {
+  function updateGiscusTheme(theme: string) {
     const giscusTheme = themeMap[theme] || 'preferred_color_scheme';
-    const iframe = document.querySelector('iframe.giscus-frame');
-    if (iframe) {
+    const iframe = document.querySelector<HTMLIFrameElement>('iframe.giscus-frame');
+    if (iframe?.contentWindow) {
       iframe.contentWindow.postMessage(
         { giscus: { setConfig: { theme: giscusTheme } } },
         'https://giscus.app'
