@@ -41,11 +41,11 @@ const currentPath = Astro.url.pathname;
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="alternate" type="application/rss+xml" title={SITE.name} href="/rss.xml" />
 
-    <!-- 字体：ZCOOL XiaoWei（标题）+ Noto Serif SC（衬线）+ Noto Sans SC（正文）+ JetBrains Mono（等宽） -->
+    <!-- 字体：ZCOOL XiaoWei（标题）+ Noto Serif SC（衬线）+ Noto Sans SC（正文·只保留 400/600 共 2 个字重）+ JetBrains Mono（等宽） -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@400;600&family=JetBrains+Mono:wght@400&display=swap"
       rel="stylesheet"
     />
 
@@ -70,15 +70,13 @@ const currentPath = Astro.url.pathname;
     )}
 
     <!-- Anti-FOUC：在 <head> 最早执行，根据 localStorage 立即设置 data-theme -->
+    <!-- 默认主题：Tokyo（用户曾在 ThemeSwitcher 切换过则用用户选择） -->
     <script is:inline>
       (function () {
         try {
           var t = localStorage.getItem('lizigao-box-theme');
-          if (!t || t === 'system') {
-            t = window.matchMedia('(prefers-color-scheme: dark)').matches
-              ? 'tokyo'
-              : 'snow';
-          }
+          // 无用户偏好时一律使用 Tokyo（不再跟随系统 light/dark）
+          if (!t) t = 'tokyo';
           document.documentElement.setAttribute('data-theme', t);
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'tokyo');

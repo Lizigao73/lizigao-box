@@ -118,18 +118,15 @@ def main() -> int:
     now_iso = _now_bj_iso()
 
     print("=== 抓取近 30 日真实数据 ===")
-    print("1/4  标普 500 us.INX ...")
-    sp  = fetch_tx_us("us.INX",  35)
-    print(f"    -> {len(sp)} 条")
-    print("2/4  纳斯达克 us.IXIC ...")
-    nas = fetch_tx_us("us.IXIC", 35)
-    print(f"    -> {len(nas)} 条")
-    print("3/4  上证指数 sh000001 ...")
-    sh  = fetch_sina_cn("sh000001", 35)
-    print(f"    -> {len(sh)} 条")
-    print("4/4  深证成指 sz399001 ...")
-    sz  = fetch_sina_cn("sz399001", 35)
-    print(f"    -> {len(sz)} 条")
+    # 并行拉 4 路
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        f_sp  = pool.submit(fetch_tx_us,   "us.INX",  35)
+        f_nas = pool.submit(fetch_tx_us,   "us.IXIC", 35)
+        f_sh  = pool.submit(fetch_sina_cn, "sh000001", 35)
+        f_sz  = pool.submit(fetch_sina_cn, "sz399001", 35)
+        sp, nas, sh, sz = f_sp.result(), f_nas.result(), f_sh.result(), f_sz.result()
+    print(f"  -> 标普 {len(sp)} / 纳指 {len(nas)} / 上证 {len(sh)} / 深证 {len(sz)}")
 
     if not any([sp, nas, sh, sz]):
         print("\n全部抓取失败，保持原数据", file=sys.stderr)
@@ -140,20 +137,20 @@ def main() -> int:
     # 限制最多 30 天
     all_dates = all_dates[-30:]
 
-    def at(arr, date):
-        for d, v in arr:
-            if d == date:
-                return v
-        return None
+    # 字典化（O(1) 查找）替代原 O(n) 线性扫描
+    sh_map  = dict(sh)
+    sz_map  = dict(sz)
+    sp_map  = dict(sp)
+    nas_map = dict(nas)
 
     snapshots = []
     for d in all_dates:
         entry = {
             "date": d,
-            "shIndex": at(sh, d),
-            "szIndex": at(sz, d),
-            "sp500": at(sp, d),
-            "nasdaq": at(nas, d),
+            "shIndex": sh_map.get(d),
+            "szIndex": sz_map.get(d),
+            "sp500":   sp_map.get(d),
+            "nasdaq":  nas_map.get(d),
             "fetchedAt": now_iso,
         }
         if any(v is not None for v in [entry["shIndex"], entry["szIndex"], entry["sp500"], entry["nasdaq"]]):

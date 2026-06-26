@@ -121,12 +121,10 @@
     font-family: theme('fontFamily.sans');
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    /* 标题用 optimizeLegibility，body 不加，避免整页 style invalidation */
     /* sticky header 偏移：64px header（让 h2 紧贴 header 下方，少量留白） */
     scroll-behavior: smooth;
     scroll-padding-top: 4rem;
-    transition: background-color var(--t-base) var(--ease-out-soft),
-                color var(--t-base) var(--ease-out-soft);
   }
   section[id], div[id], h1[id], h2[id], h3[id] {
     scroll-margin-top: 4rem;
@@ -135,7 +133,6 @@
     min-height: 100vh;
     background-color: var(--bg-primary);
     background-image: var(--hero-glow);
-    transition: background-color var(--t-base) var(--ease-out-soft);
   }
 
   /* 滚动条 */
@@ -164,12 +161,10 @@
  * =========================================================== */
 
 @layer components {
-  /* 玻璃卡（目前三套主题统一用纯色，不需要 backdrop blur） */
+  /* 玻璃卡（当前三套主题 blur 都为 0，不创建合成层；如需玻璃效果再启用） */
   .glass-card {
     background: var(--bg-glass);
     border: 1px solid var(--border);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
   }
 
   /* 渐变文字 */

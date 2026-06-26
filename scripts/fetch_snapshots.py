@@ -63,19 +63,34 @@ def fetch_yf(symbol: str) -> float | None:
         return None
 
 
+def _fetch_dxy() -> float | None:
+    """DXY 多源回退封装"""
+    v = fetch_yf("DX-Y.NYB")
+    if v is not None:
+        return v
+    return fetch_yf("^DXY")
+
+
 def main() -> int:
     today = _today_bj()
     now_iso = _now_bj_iso()
 
-    sh   = fetch_a_share("sh000001")
-    sz   = fetch_a_share("sz399001")
-    sp   = fetch_yf("^SPX")
-    nas  = fetch_yf("^IXIC")
-    # 伦敦黄金用 GC=F（COMEX 黄金期货），美元指数用 ^DXY
-    gold = fetch_yf("GC=F")
-    dxy  = fetch_yf("DX-Y.NYB")
-    if dxy is None:
-        dxy = fetch_yf("^DXY")
+    # 并行抓取 4 个 yfinance 任务（akshare 仍走单独调用以避开其内部重入问题）
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        f_sh   = pool.submit(fetch_a_share, "sh000001")
+        f_sz   = pool.submit(fetch_a_share, "sz399001")
+        f_sp   = pool.submit(fetch_yf, "^SPX")
+        f_nas  = pool.submit(fetch_yf, "^IXIC")
+        f_gold = pool.submit(fetch_yf, "GC=F")
+        # DXY 多源回退，单独跑以避免 ^DXY 拉取耗时拖累 GC=F
+        f_dxy  = pool.submit(_fetch_dxy)
+
+        sh, sz, sp, nas, gold = (
+            f_sh.result(), f_sz.result(), f_sp.result(), f_nas.result(), f_gold.result()
+        )
+        dxy = f_dxy.result()
 
     # 读已有数据
     if OUT.exists():

@@ -12,7 +12,7 @@ const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
 const latest: FinancialSnapshot | undefined = sorted[sorted.length - 1];
 const prev:   FinancialSnapshot | undefined = sorted[sorted.length - 2];
 
-// 计算每个指数的当日变化
+// 计算每个指数的当日变化（始终基于最新两条，不受日期范围影响）
 const indices: IndexWithChange[] = [
   { name: '上证指数', code: 'sh000001', value: latest?.shIndex ?? null, change: null, changePct: null },
   { name: '深证成指', code: 'sz399001', value: latest?.szIndex ?? null, change: null, changePct: null },
@@ -37,21 +37,24 @@ if (latest && prev) {
   indices[5] = { ...indices[5], ...compute(latest.dxy,     prev.dxy) };
 }
 
-// 用于折线图：30 日窗口（或全部，若不足 30 日）
-const window30 = sorted.slice(-30);
-const chartLabels = window30.map((s) => s.date);
-const chartSh  = window30.map((s) => s.shIndex);
-const chartSz  = window30.map((s) => s.szIndex);
-const chartSp  = window30.map((s) => s.sp500);
-const chartNas = window30.map((s) => s.nasdaq);
-const chartGold = window30.map((s) => s.gold);
-const chartDxy  = window30.map((s) => s.dxy);
+// ===== 完整数据序列（图表 + 表格共用，客户端按日期范围过滤）=====
+const allLabels = sorted.map((s) => s.date);
+const allSh     = sorted.map((s) => s.shIndex);
+const allSz     = sorted.map((s) => s.szIndex);
+const allSp     = sorted.map((s) => s.sp500);
+const allNas    = sorted.map((s) => s.nasdaq);
+const allGold   = sorted.map((s) => s.gold);
+const allDxy    = sorted.map((s) => s.dxy);
+
+const dataMinDate = allLabels[0] ?? '';
+const dataMaxDate = allLabels[allLabels.length - 1] ?? '';
+const totalDays   = allLabels.length;
 
 const lastUpdated = data.lastUpdated;
 const source = data.source;
 ---
 
-<BaseLayout title="数据追踪" description="A 股 / 美股主要指数每日快照，30 日趋势图。">
+<BaseLayout title="数据追踪" description="A 股 / 美股主要指数每日快照，支持日期范围选择。">
   <section class="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
     <!-- 头部 -->
     <header class="mb-10">
@@ -70,7 +73,7 @@ const source = data.source;
       </p>
     </header>
 
-    <!-- 当日卡片 -->
+    <!-- 当日卡片（始终显示最新一日） -->
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {
         indices.map((idx) => {
@@ -103,10 +106,72 @@ const source = data.source;
       }
     </div>
 
+    <!-- 日期范围选择器 -->
+    <div
+      class="mt-10 rounded-card border border-border bg-bg-secondary/60 p-5 shadow-soft"
+      id="date-range-panel"
+      data-data-min={dataMinDate}
+      data-data-max={dataMaxDate}
+    >
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="font-serif text-lg font-semibold text-text-primary">日期范围</h2>
+          <p class="mt-1 font-mono text-xs text-text-tertiary">
+            图表与表格联动 · 共 <span id="date-range-total">{totalDays}</span> 个交易日可选（{dataMinDate} → {dataMaxDate}）
+          </p>
+        </div>
+        <div class="flex flex-wrap items-end gap-3">
+          <label class="flex flex-col gap-1">
+            <span class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">开始</span>
+            <input
+              type="date"
+              id="date-start"
+              min={dataMinDate}
+              max={dataMaxDate}
+              value={dataMinDate}
+              class="rounded-md border border-border bg-bg-primary px-3 py-1.5 font-mono text-sm text-text-primary outline-none focus:border-accent"
+            />
+          </label>
+          <span class="pb-2 text-text-tertiary">→</span>
+          <label class="flex flex-col gap-1">
+            <span class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">结束</span>
+            <input
+              type="date"
+              id="date-end"
+              min={dataMinDate}
+              max={dataMaxDate}
+              value={dataMaxDate}
+              class="rounded-md border border-border bg-bg-primary px-3 py-1.5 font-mono text-sm text-text-primary outline-none focus:border-accent"
+            />
+          </label>
+          <div class="flex flex-wrap gap-1.5">
+            {[
+              { id: '1m', label: '近 1 月', days: 30 },
+              { id: '3m', label: '近 3 月', days: 90 },
+              { id: '6m', label: '近 6 月', days: 180 },
+              { id: 'all', label: '全部', days: 9999 },
+            ].map((r) => (
+              <button
+                type="button"
+                data-range-preset={r.id}
+                data-range-days={r.days}
+                class:list={[
+                  'rounded-pill border border-border bg-bg-primary px-3 py-1.5 font-mono text-xs text-text-secondary transition-colors hover:border-accent hover:text-accent',
+                ]}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <p id="date-range-summary" class="mt-3 font-mono text-xs text-text-tertiary"></p>
+    </div>
+
     <!-- 趋势图 -->
-    <div class="mt-10 rounded-card border border-border bg-bg-secondary/60 p-6 shadow-soft">
+    <div class="mt-6 rounded-card border border-border bg-bg-secondary/60 p-6 shadow-soft">
       <div class="mb-4 flex items-center justify-between">
-        <h2 class="font-serif text-lg font-semibold text-text-primary">近 30 日趋势 · A 股 + 美股</h2>
+        <h2 class="font-serif text-lg font-semibold text-text-primary">趋势 · A 股 + 美股</h2>
         <div class="flex flex-wrap items-center gap-3 text-xs">
           {
             [
@@ -124,30 +189,20 @@ const source = data.source;
         </div>
       </div>
       <div class="relative h-72 sm:h-96">
-        <canvas id="trend-chart" aria-label="30 日 A 股 + 美股指数趋势折线图"></canvas>
+        <canvas id="trend-chart" aria-label="A 股 + 美股指数趋势折线图"></canvas>
         <div
           id="trend-chart-fallback"
           class="absolute inset-0 hidden items-center justify-center text-sm text-text-tertiary"
         >
           图表加载中…
         </div>
-        <div
-          id="trend-chart-data"
-          class="hidden"
-          data-labels={JSON.stringify(chartLabels)}
-          data-sh={JSON.stringify(chartSh)}
-          data-sz={JSON.stringify(chartSz)}
-          data-sp={JSON.stringify(chartSp)}
-          data-nas={JSON.stringify(chartNas)}
-          aria-hidden="true"
-        />
       </div>
     </div>
 
     <!-- 趋势图：黄金 + 美元指数 -->
     <div class="mt-6 rounded-card border border-border bg-bg-secondary/60 p-6 shadow-soft">
       <div class="mb-4 flex items-center justify-between">
-        <h2 class="font-serif text-lg font-semibold text-text-primary">近 30 日趋势 · 伦敦黄金 + 美元指数</h2>
+        <h2 class="font-serif text-lg font-semibold text-text-primary">趋势 · 伦敦黄金 + 美元指数</h2>
         <div class="flex flex-wrap items-center gap-3 text-xs">
           {
             [
@@ -163,30 +218,31 @@ const source = data.source;
         </div>
       </div>
       <div class="relative h-64 sm:h-80">
-        <canvas id="commodity-chart" aria-label="30 日伦敦黄金 + 美元指数趋势折线图"></canvas>
+        <canvas id="commodity-chart" aria-label="伦敦黄金 + 美元指数趋势折线图"></canvas>
         <div
           id="commodity-chart-fallback"
           class="absolute inset-0 hidden items-center justify-center text-sm text-text-tertiary"
         >
           图表加载中…
         </div>
-        <div
-          id="commodity-chart-data"
-          class="hidden"
-          data-labels={JSON.stringify(chartLabels)}
-          data-gold={JSON.stringify(chartGold)}
-          data-dxy={JSON.stringify(chartDxy)}
-          aria-hidden="true"
-        />
       </div>
     </div>
 
-    <!-- 历史表格 -->
+    <!-- 历史表格（可滚动 + 随日期范围过滤） -->
     <div class="mt-10">
-      <h2 class="mb-4 font-serif text-lg font-semibold text-text-primary">历史快照</h2>
-      <div class="overflow-x-auto rounded-card border border-border bg-bg-secondary/60">
+      <div class="mb-4 flex items-baseline justify-between gap-4">
+        <h2 class="font-serif text-lg font-semibold text-text-primary">历史快照</h2>
+        <p class="font-mono text-xs text-text-tertiary">
+          显示 <span id="table-count">{totalDays}</span> / {totalDays} 条
+        </p>
+      </div>
+      <div
+        id="history-table-scroll"
+        class="overflow-x-auto overflow-y-auto rounded-card border border-border bg-bg-secondary/60"
+        style="max-height: 480px;"
+      >
         <table class="w-full min-w-[860px] text-left text-sm">
-          <thead>
+          <thead class="sticky top-0 z-10 bg-bg-secondary/95 backdrop-blur">
             <tr class="border-b border-border text-xs uppercase tracking-widest text-text-tertiary">
               <th class="px-4 py-3 font-mono font-normal">日期</th>
               <th class="px-4 py-3 text-right font-mono font-normal">上证</th>
@@ -197,10 +253,13 @@ const source = data.source;
               <th class="px-4 py-3 text-right font-mono font-normal">DXY</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="history-tbody">
             {
               [...sorted].reverse().map((s) => (
-                <tr class="border-b border-border-soft transition-colors hover:bg-bg-tertiary/60">
+                <tr
+                  class="border-b border-border-soft transition-colors hover:bg-bg-tertiary/60"
+                  data-date={s.date}
+                >
                   <td class="px-4 py-2.5 font-mono text-xs text-text-tertiary">{s.date}</td>
                   <td class="px-4 py-2.5 text-right font-mono tabular-nums text-text-primary">
                     {s.shIndex != null ? s.shIndex.toFixed(2) : '—'}
@@ -230,6 +289,22 @@ const source = data.source;
   </section>
 </BaseLayout>
 
+<!-- 把全量数据塞进单一 payload（避免 7 次重复 JSON.stringify） -->
+<div
+  id="chart-data-source"
+  class="hidden"
+  aria-hidden="true"
+  data-payload={JSON.stringify({
+    labels: allLabels,
+    sh: allSh,
+    sz: allSz,
+    sp: allSp,
+    nas: allNas,
+    gold: allGold,
+    dxy: allDxy,
+  })}
+></div>
+
 <script>
   import {
     Chart,
@@ -242,6 +317,7 @@ const source = data.source;
     Legend,
     Filler,
   } from 'chart.js';
+  import zoomPlugin from 'chartjs-plugin-zoom';
 
   Chart.register(
     LineController,
@@ -252,9 +328,71 @@ const source = data.source;
     Tooltip,
     Legend,
     Filler,
+    zoomPlugin,
   );
 
-  // 从 CSS 变量读取当前主题色，让图表跟随主题
+  // ===== IndexedDB 缓存 =====
+  // 避免每次加载都 parse ~270 条 JSON
+  const IDB_NAME = 'lizigao-box';
+  const IDB_STORE = 'financial-snapshots';
+  const IDB_KEY = 'snapshots-v1';
+
+  type SnapshotPayload = {
+    labels: string[];
+    sh: (number | null)[];
+    sz: (number | null)[];
+    sp: (number | null)[];
+    nas: (number | null)[];
+    gold: (number | null)[];
+    dxy: (number | null)[];
+    lastUpdated: string;
+    source: string;
+  };
+
+  function openIDB(): Promise<IDBDatabase | null> {
+    return new Promise((resolve) => {
+      if (typeof indexedDB === 'undefined') return resolve(null);
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  }
+
+  async function idbGet<T>(db: IDBDatabase | null, key: string): Promise<T | null> {
+    if (!db) return null;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get(key);
+        req.onsuccess = () => resolve((req.result as T) ?? null);
+        req.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+
+  async function idbPut<T>(db: IDBDatabase | null, key: string, value: T): Promise<void> {
+    if (!db) return;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      } catch {
+        resolve();
+      }
+    });
+  }
+
+  // ===== 主题色（随主题切换）=====
   const css = (name: string, fallback: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
   const hexToRgba = (hex: string, a: number) => {
@@ -264,7 +402,6 @@ const source = data.source;
     const b = parseInt(h.substring(4,6), 16);
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   };
-
   const palette = () => {
     const accent       = css('--accent',          '#7AA2F7');
     const buildingClr  = css('--status-building', '#E0AF68');
@@ -282,7 +419,6 @@ const source = data.source;
       gridColor: hexToRgba(border, 0.5),
     };
   };
-
   const tooltipStyle = (p: ReturnType<typeof palette>) => ({
     backgroundColor: p.bgSecondary,
     titleColor: p.textPrimary,
@@ -295,203 +431,297 @@ const source = data.source;
     bodyFont:  { family: 'JetBrains Mono', size: 11 },
   });
 
-  // ====== 图 1：A 股 + 美股 ======
-  const root1 = document.getElementById('trend-chart-data');
-  if (!root1) {
-    console.warn('[data] no trend chart data node');
-  } else {
-    const labels = JSON.parse(root1.dataset.labels || '[]');
-    const sh  = JSON.parse(root1.dataset.sh  || '[]');
-    const sz  = JSON.parse(root1.dataset.sz  || '[]');
-    const sp  = JSON.parse(root1.dataset.sp  || '[]');
-    const nas = JSON.parse(root1.dataset.nas || '[]');
+  // ===== 读全量数据（IDB 优先，fallback 到 inline payload）=====
+  const source = document.getElementById('chart-data-source');
+  if (!source) throw new Error('[data] missing chart-data-source');
 
-    const canvas = document.getElementById('trend-chart') as HTMLCanvasElement | null;
-    const fallback = document.getElementById('trend-chart-fallback');
-    if (canvas && fallback) {
-      const p = palette();
-      try {
-        new Chart(canvas, {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [
-              {
-                label: '上证',
-                data: sh,
-                borderColor: p.accent,
-                backgroundColor: hexToRgba(p.accent, 0.10),
-                borderWidth: 2,
-                tension: 0.25,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                fill: false,
-                yAxisID: 'y1',
-              },
-              {
-                label: '深证',
-                data: sz,
-                borderColor: p.buildingClr,
-                backgroundColor: hexToRgba(p.buildingClr, 0.10),
-                borderWidth: 2,
-                tension: 0.25,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                fill: false,
-                yAxisID: 'y1',
-              },
-              {
-                label: '标普 500',
-                data: sp,
-                borderColor: p.onlineClr,
-                backgroundColor: hexToRgba(p.onlineClr, 0.10),
-                borderWidth: 2,
-                tension: 0.25,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                fill: false,
-                yAxisID: 'y2',
-              },
-              {
-                label: '纳指',
-                data: nas,
-                borderColor: p.experiment,
-                backgroundColor: hexToRgba(p.experiment, 0.10),
-                borderWidth: 2,
-                tension: 0.25,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                fill: false,
-                yAxisID: 'y2',
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-              legend: { display: false },
-              tooltip: tooltipStyle(p),
-            },
-            scales: {
-              x: {
-                type: 'category',
-                ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
-                grid: { color: p.gridColor },
-              },
-              y1: {
-                type: 'linear',
-                position: 'left',
-                ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
-                grid: { color: p.gridColor },
-              },
-              y2: {
-                type: 'linear',
-                position: 'right',
-                ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
-                grid: { display: false },
-              },
-            },
-          },
-        });
-        fallback.style.display = 'none';
-      } catch (err) {
-        console.error('[data] chart 渲染失败', err);
-        fallback.textContent = '图表渲染失败：' + (err as Error).message;
-        fallback.classList.remove('hidden');
+  type NumArr = (number | null)[];
+  const inlinePayload: { labels: string[]; sh: NumArr; sz: NumArr; sp: NumArr; nas: NumArr; gold: NumArr; dxy: NumArr } =
+    JSON.parse(source.dataset.payload || '{}');
+
+  // 异步加载：先尝试 IDB，命中则用 IDB（避免 parse ~270 条）；未命中用 inline 并写入 IDB
+  const dbPromise = openIDB();
+  let payload: { labels: string[]; sh: NumArr; sz: NumArr; sp: NumArr; nas: NumArr; gold: NumArr; dxy: NumArr } = inlinePayload;
+
+  const allLabels: string[] = payload.labels || [];
+  const allSh: NumArr       = payload.sh    || [];
+  const allSz: NumArr       = payload.sz    || [];
+  const allSp: NumArr       = payload.sp    || [];
+  const allNas: NumArr      = payload.nas   || [];
+  const allGold: NumArr     = payload.gold  || [];
+  const allDxy: NumArr      = payload.dxy   || [];
+
+  // ===== DOM 引用（按出现顺序声明）=====
+  const startInput = document.getElementById('date-start') as HTMLInputElement | null;
+  const endInput   = document.getElementById('date-end') as HTMLInputElement | null;
+  const panel      = document.getElementById('date-range-panel');
+  const summaryEl  = document.getElementById('date-range-summary');
+  const tableCount = document.getElementById('table-count');
+  const tbody      = document.getElementById('history-tbody');
+
+  // 缓存 tbody 行引用（避免每次 applyRange 重新 querySelectorAll）
+  const historyRows: HTMLTableRowElement[] = tbody
+    ? Array.from(tbody.querySelectorAll<HTMLTableRowElement>('tr[data-date]'))
+    : [];
+
+  const dataMin = panel?.dataset.dataMin ?? allLabels[0] ?? '';
+  const dataMax = panel?.dataset.dataMax ?? allLabels[allLabels.length - 1] ?? '';
+
+  // 默认：最近 1 个月（约 30 天）
+  function defaultRange(): { start: string; end: string } {
+    if (allLabels.length === 0) return { start: dataMin, end: dataMax };
+    const endIdx = allLabels.length - 1;
+    const startIdx = Math.max(0, endIdx - 29);
+    return { start: allLabels[startIdx], end: allLabels[endIdx] };
+  }
+  const initRange = defaultRange();
+  if (startInput) startInput.value = initRange.start;
+  if (endInput)   endInput.value   = initRange.end;
+
+  // 取 [start, end] 闭区间切片（labels 是升序）
+  function sliceByRange(start: string, end: string) {
+    const sIdx = allLabels.findIndex((d) => d >= start);
+    const eIdx = (() => {
+      for (let i = allLabels.length - 1; i >= 0; i--) {
+        if (allLabels[i] <= end) return i;
       }
+      return -1;
+    })();
+    if (sIdx < 0 || eIdx < 0 || sIdx > eIdx) {
+      return { labels: [] as string[], sh: [] as NumArr, sz: [] as NumArr, sp: [] as NumArr, nas: [] as NumArr, gold: [] as NumArr, dxy: [] as NumArr };
+    }
+    return {
+      labels: allLabels.slice(sIdx, eIdx + 1),
+      sh:  allSh.slice(sIdx, eIdx + 1),
+      sz:  allSz.slice(sIdx, eIdx + 1),
+      sp:  allSp.slice(sIdx, eIdx + 1),
+      nas: allNas.slice(sIdx, eIdx + 1),
+      gold:allGold.slice(sIdx, eIdx + 1),
+      dxy: allDxy.slice(sIdx, eIdx + 1),
+    };
+  }
+
+  // ===== zoom 插件配置（拖拽缩放 / 滚轮 / 双击重置）=====
+  const zoomOptions = (p: ReturnType<typeof palette>) => ({
+    zoom: {
+      wheel: { enabled: true, modifierKey: undefined as unknown as 'ctrl' | undefined },
+      pinch: { enabled: true },
+      drag: {
+        enabled: true,
+        backgroundColor: hexToRgba(p.accent, 0.18),
+        borderColor: p.accent,
+        borderWidth: 1,
+      },
+      mode: 'x' as const,
+    },
+    pan: { enabled: true, mode: 'x' as const },
+    limits: { x: { min: 'original' as const, max: 'original' as const } },
+  });
+
+  // ===== 图表 1：A 股 + 美股 =====
+  const canvas1 = document.getElementById('trend-chart') as HTMLCanvasElement | null;
+  const fallback1 = document.getElementById('trend-chart-fallback');
+  if (!canvas1 || !fallback1) throw new Error('[data] missing trend-chart canvas');
+
+  const p = palette();
+  let chart1: Chart;
+  try {
+    const init = sliceByRange(initRange.start, initRange.end);
+    chart1 = new Chart(canvas1, {
+      type: 'line',
+      data: {
+        labels: init.labels,
+        datasets: [
+          { label: '上证',     data: init.sh,  borderColor: p.accent,        backgroundColor: hexToRgba(p.accent, 0.10),        borderWidth: 2, tension: 0.25, spanGaps: true, pointRadius: 0, pointHoverRadius: 4, fill: false, yAxisID: 'y1' },
+          { label: '深证',     data: init.sz,  borderColor: p.buildingClr,   backgroundColor: hexToRgba(p.buildingClr, 0.10),   borderWidth: 2, tension: 0.25, spanGaps: true, pointRadius: 0, pointHoverRadius: 4, fill: false, yAxisID: 'y1' },
+          { label: '标普 500', data: init.sp,  borderColor: p.onlineClr,     backgroundColor: hexToRgba(p.onlineClr, 0.10),     borderWidth: 2, tension: 0.25, spanGaps: true, pointRadius: 0, pointHoverRadius: 4, fill: false, yAxisID: 'y2' },
+          { label: '纳指',     data: init.nas, borderColor: p.experiment,    backgroundColor: hexToRgba(p.experiment, 0.10),    borderWidth: 2, tension: 0.25, spanGaps: true, pointRadius: 0, pointHoverRadius: 4, fill: false, yAxisID: 'y2' },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: tooltipStyle(p),
+          zoom: zoomOptions(p),
+        },
+        scales: {
+          x:  { type: 'category', ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: p.gridColor } },
+          y1: { type: 'linear', position: 'left',  ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: p.gridColor } },
+          y2: { type: 'linear', position: 'right', ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } }, grid: { display: false } },
+        },
+      },
+    });
+    fallback1.style.display = 'none';
+    // 双击重置 zoom
+    canvas1.addEventListener('dblclick', () => chart1.resetZoom());
+  } catch (err) {
+    console.error('[data] chart 1 渲染失败', err);
+    fallback1.textContent = '图表渲染失败：' + (err as Error).message;
+    fallback1.classList.remove('hidden');
+    throw err;
+  }
+
+  // ===== 图表 2：黄金 + 美元指数 =====
+  const canvas2 = document.getElementById('commodity-chart') as HTMLCanvasElement | null;
+  const fallback2 = document.getElementById('commodity-chart-fallback');
+  let chart2: Chart | null = null;
+  if (canvas2 && fallback2) {
+    try {
+      const init = sliceByRange(initRange.start, initRange.end);
+      chart2 = new Chart(canvas2, {
+        type: 'line',
+        data: {
+          labels: init.labels,
+          datasets: [
+            { label: '伦敦黄金 (XAU/USD)', data: init.gold, borderColor: p.indexUp, backgroundColor: hexToRgba(p.indexUp, 0.10), borderWidth: 2, tension: 0.25, spanGaps: true, pointRadius: 0, pointHoverRadius: 4, fill: false, yAxisID: 'y1' },
+            { label: '美元指数 (DXY)',     data: init.dxy,  borderColor: p.accent, backgroundColor: hexToRgba(p.accent, 0.10), borderWidth: 2, tension: 0.25, spanGaps: true, pointRadius: 0, pointHoverRadius: 4, fill: false, yAxisID: 'y2' },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: tooltipStyle(p), zoom: zoomOptions(p) },
+          scales: {
+            x:  { type: 'category', ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: p.gridColor } },
+            y1: { type: 'linear', position: 'left',  ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 }, callback: (v) => '$' + Number(v).toFixed(0) }, grid: { color: p.gridColor } },
+            y2: { type: 'linear', position: 'right', ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 }, callback: (v) => Number(v).toFixed(1) }, grid: { display: false } },
+          },
+        },
+      });
+      fallback2.style.display = 'none';
+      canvas2.addEventListener('dblclick', () => chart2?.resetZoom());
+    } catch (err) {
+      console.error('[data] chart 2 渲染失败', err);
+      fallback2.textContent = '图表渲染失败：' + (err as Error).message;
+      fallback2.classList.remove('hidden');
     }
   }
 
-  // ====== 图 2：伦敦黄金 + 美元指数 ======
-  const root2 = document.getElementById('commodity-chart-data');
-  if (!root2) {
-    console.warn('[data] no commodity chart data node');
-  } else {
-    const labels = JSON.parse(root2.dataset.labels || '[]');
-    const gold = JSON.parse(root2.dataset.gold || '[]');
-    const dxy  = JSON.parse(root2.dataset.dxy  || '[]');
+  // ===== 范围变化 → 刷新图表 + 表格 =====
+  function applyRange(start: string, end: string) {
+    if (start > end) {
+      // 自动交换
+      [start, end] = [end, start];
+      if (startInput) startInput.value = start;
+      if (endInput)   endInput.value   = end;
+    }
+    const slice = sliceByRange(start, end);
+    const n = slice.labels.length;
 
-    const canvas = document.getElementById('commodity-chart') as HTMLCanvasElement | null;
-    const fallback = document.getElementById('commodity-chart-fallback');
-    if (canvas && fallback) {
-      const p = palette();
-      try {
-        new Chart(canvas, {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [
-              {
-                label: '伦敦黄金 (XAU/USD)',
-                data: gold,
-                borderColor: p.indexUp,
-                backgroundColor: hexToRgba(p.indexUp, 0.10),
-                borderWidth: 2,
-                tension: 0.25,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                fill: false,
-                yAxisID: 'y1',
-              },
-              {
-                label: '美元指数 (DXY)',
-                data: dxy,
-                borderColor: p.accent,
-                backgroundColor: hexToRgba(p.accent, 0.10),
-                borderWidth: 2,
-                tension: 0.25,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                fill: false,
-                yAxisID: 'y2',
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-              legend: { display: false },
-              tooltip: tooltipStyle(p),
-            },
-            scales: {
-              x: {
-                type: 'category',
-                ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
-                grid: { color: p.gridColor },
-              },
-              y1: {
-                type: 'linear',
-                position: 'left',
-                ticks: {
-                  color: p.textTertiary,
-                  font: { family: 'JetBrains Mono', size: 10 },
-                  callback: (v) => '$' + Number(v).toFixed(0),
-                },
-                grid: { color: p.gridColor },
-              },
-              y2: {
-                type: 'linear',
-                position: 'right',
-                ticks: {
-                  color: p.textTertiary,
-                  font: { family: 'JetBrains Mono', size: 10 },
-                  callback: (v) => Number(v).toFixed(1),
-                },
-                grid: { display: false },
-              },
-            },
-          },
-        });
-        fallback.style.display = 'none';
-      } catch (err) {
-        console.error('[data] commodity chart 渲染失败', err);
-        fallback.textContent = '图表渲染失败：' + (err as Error).message;
-        fallback.classList.remove('hidden');
+    // 图表 1
+    chart1.data.labels = slice.labels;
+    chart1.data.datasets[0].data = slice.sh;
+    chart1.data.datasets[1].data = slice.sz;
+    chart1.data.datasets[2].data = slice.sp;
+    chart1.data.datasets[3].data = slice.nas;
+    chart1.update();
+
+    // 图表 2
+    if (chart2) {
+      chart2.data.labels = slice.labels;
+      chart2.data.datasets[0].data = slice.gold;
+      chart2.data.datasets[1].data = slice.dxy;
+      chart2.update();
+    }
+
+    // 表格：根据 data-date 隐藏范围外行（用缓存的 historyRows）
+    if (historyRows.length) {
+      let shown = 0;
+      for (let i = 0; i < historyRows.length; i++) {
+        const row = historyRows[i];
+        const d = row.dataset.date || '';
+        const inRange = d >= start && d <= end;
+        row.style.display = inRange ? '' : 'none';
+        if (inRange) shown++;
       }
+      if (tableCount) tableCount.textContent = String(shown);
+    }
+
+    if (summaryEl) {
+      summaryEl.textContent = n === 0
+        ? '该范围内无数据'
+        : `当前范围 ${n} 个交易日（${slice.labels[0]} → ${slice.labels[n - 1]}）`;
     }
   }
+
+  if (startInput) startInput.addEventListener('change', () => {
+    if (startInput.value && endInput?.value) applyRange(startInput.value, endInput.value);
+  });
+  if (endInput) endInput.addEventListener('change', () => {
+    if (startInput?.value && endInput.value) applyRange(startInput.value, endInput.value);
+  });
+
+  // 预设按钮
+  document.querySelectorAll<HTMLButtonElement>('[data-range-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const days = Number(btn.dataset.rangeDays || '30');
+      if (days >= 9999) {
+        applyRange(dataMin, dataMax);
+        if (startInput) startInput.value = dataMin;
+        if (endInput)   endInput.value   = dataMax;
+        return;
+      }
+      // 在 allLabels 升序里取最后 N 条
+      const endIdx = allLabels.length - 1;
+      const startIdx = Math.max(0, endIdx - days + 1);
+      const s = allLabels[startIdx];
+      const e = allLabels[endIdx];
+      if (startInput) startInput.value = s;
+      if (endInput)   endInput.value   = e;
+      applyRange(s, e);
+    });
+  });
+
+  // 首次渲染：默认范围
+  applyRange(initRange.start, initRange.end);
+
+  // ===== IDB 缓存回填（所有 const 声明完毕后再启动）=====
+  (async () => {
+    try {
+      const db = await dbPromise;
+      const cached = await idbGet<SnapshotPayload>(db, IDB_KEY);
+      if (cached && cached.labels && cached.labels.length > 0) {
+        // 缓存命中：用 IDB 替换 payload 并刷新图表
+        payload = {
+          labels: cached.labels,
+          sh: cached.sh,
+          sz: cached.sz,
+          sp: cached.sp,
+          nas: cached.nas,
+          gold: cached.gold,
+          dxy: cached.dxy,
+        };
+        allLabels.length = 0;
+        allLabels.push(...(payload.labels || []));
+        allSh.length = 0;     allSh.push(...(payload.sh    || []));
+        allSz.length = 0;     allSz.push(...(payload.sz    || []));
+        allSp.length = 0;     allSp.push(...(payload.sp    || []));
+        allNas.length = 0;    allNas.push(...(payload.nas  || []));
+        allGold.length = 0;   allGold.push(...(payload.gold || []));
+        allDxy.length = 0;    allDxy.push(...(payload.dxy  || []));
+        applyRange(startInput?.value || dataMin, endInput?.value || dataMax);
+      } else {
+        // 首次：写入 IDB
+        await idbPut<SnapshotPayload>(db, IDB_KEY, {
+          labels: inlinePayload.labels || [],
+          sh: inlinePayload.sh || [],
+          sz: inlinePayload.sz || [],
+          sp: inlinePayload.sp || [],
+          nas: inlinePayload.nas || [],
+          gold: inlinePayload.gold || [],
+          dxy: inlinePayload.dxy || [],
+          lastUpdated: (source.dataset.lastUpdated || '') as string,
+          source: (source.dataset.source || '') as string,
+        });
+      }
+    } catch {
+      // IDB 不可用，忽略
+    }
+  })();
 </script>

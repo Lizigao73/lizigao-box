@@ -17,17 +17,22 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
-      - name: Fetch real historical data
+      - name: Install dependencies
         run: |
-          python scripts/fetch_real_history.py
-          python scripts/fetch_snapshots.py
+          python -m pip install --upgrade pip
+          pip install akshare
+
+      - name: Fetch real data from official sources
+        run: |
+          echo "=== 调用 fetch_official.py（akshare + sina hq）==="
+          python scripts/fetch_official.py
 
       - name: Verify output
         run: |
-          echo "=== financial-snapshots.json ==="
-          cat src/data/financial-snapshots.json | head -50
+          echo "=== financial-snapshots.json head ==="
+          head -40 src/data/financial-snapshots.json
           echo ""
           echo "=== File size ==="
           ls -lh src/data/financial-snapshots.json
@@ -51,8 +56,11 @@ jobs:
           git add src/data/financial-snapshots.json
           git commit -m "chore(data): 每日自动抓取 [skip ci]
 
-          - 上证指数 / 深证成指 / 标普 500 / 纳斯达克
-          - 伦敦黄金 (GC=F) / 美元指数 (^DXY)
-          - 由 GitHub Actions 定时任务自动更新
-          - 时间戳: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          数据源（全部官方/权威）：
+            - A 股 (sh000001, sz399001): akshare.stock_zh_index_daily
+            - 标普 500 / 纳指: akshare.index_us_stock_sina
+            - 伦敦金 (XAU): akshare.futures_foreign_hist
+            - 美元指数 (DXY): sina hq DINI
+
+          时间戳: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           git push
