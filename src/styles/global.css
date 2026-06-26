@@ -67,6 +67,9 @@
   --status-down:       #BF616A;
   --shadow-color:      rgba(0, 0, 0, 0.45);
 
+  --index-up:    #BF616A;
+  --index-down:  #A3BE8C;
+
   --grid-bg: none;
   --hero-glow: none;
   --glass-blur: 0px;
@@ -94,6 +97,9 @@
   --status-online:     #3D6B95;
   --status-down:       #A33D45;
   --shadow-color:      rgba(46, 52, 64, 0.08);
+
+  --index-up:    #D14747;
+  --index-down:  #3F8B3D;
 
   --grid-bg: none;
   --hero-glow: none;

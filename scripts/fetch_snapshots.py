@@ -1,9 +1,9 @@
 """
-fetch_snapshots.py - 抓取 A 股 / 美股主要指数收盘数据
+fetch_snapshots.py - 抓取 A 股 / 美股 / 黄金 / 美元指数收盘数据
 
 数据源：
   - A 股：akshare（stock_zh_index_daily）
-  - 美股：yfinance（^SPX, ^IXIC）
+  - 美股 / 黄金 / DXY：yfinance（^SPX, ^IXIC, GC=F, ^DXY）
 输出：src/data/financial-snapshots.json
 """
 
@@ -45,8 +45,8 @@ def fetch_a_share(symbol: str) -> float | None:
         return None
 
 
-def fetch_us_index(symbol: str) -> float | None:
-    """抓美股指数（yfinance）"""
+def fetch_yf(symbol: str) -> float | None:
+    """通过 yfinance 抓任意代码的最新收盘价（美股 / 期货 / 指数）"""
     try:
         import yfinance as yf
     except ImportError:
@@ -67,10 +67,15 @@ def main() -> int:
     today = _today_bj()
     now_iso = _now_bj_iso()
 
-    sh  = fetch_a_share("sh000001")
-    sz  = fetch_a_share("sz399001")
-    sp  = fetch_us_index("^SPX")
-    nas = fetch_us_index("^IXIC")
+    sh   = fetch_a_share("sh000001")
+    sz   = fetch_a_share("sz399001")
+    sp   = fetch_yf("^SPX")
+    nas  = fetch_yf("^IXIC")
+    # 伦敦黄金用 GC=F（COMEX 黄金期货），美元指数用 ^DXY
+    gold = fetch_yf("GC=F")
+    dxy  = fetch_yf("DX-Y.NYB")
+    if dxy is None:
+        dxy = fetch_yf("^DXY")
 
     # 读已有数据
     if OUT.exists():
@@ -91,6 +96,8 @@ def main() -> int:
         "szIndex": sz,
         "sp500": sp,
         "nasdaq": nas,
+        "gold": gold,
+        "dxy": dxy,
         "fetchedAt": now_iso,
     }
     if existing_idx is not None:
@@ -102,7 +109,7 @@ def main() -> int:
     snapshots = snapshots[-365:]
 
     data["lastUpdated"] = now_iso
-    data["source"] = "akshare + yfinance (GitHub Actions 定时抓取)"
+    data["source"] = "akshare (sh000001, sz399001) + yfinance (^SPX, ^IXIC, GC=F, ^DXY) · GitHub Actions 定时抓取"
     data["snapshots"] = snapshots
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

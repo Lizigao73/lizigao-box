@@ -18,6 +18,8 @@ const indices: IndexWithChange[] = [
   { name: '深证成指', code: 'sz399001', value: latest?.szIndex ?? null, change: null, changePct: null },
   { name: '标普 500', code: '^SPX',     value: latest?.sp500   ?? null, change: null, changePct: null },
   { name: '纳斯达克', code: '^IXIC',    value: latest?.nasdaq  ?? null, change: null, changePct: null },
+  { name: '伦敦黄金', code: 'XAU/USD',  value: latest?.gold    ?? null, change: null, changePct: null, precision: 2 },
+  { name: '美元指数', code: 'DXY',      value: latest?.dxy     ?? null, change: null, changePct: null, precision: 3 },
 ];
 
 if (latest && prev) {
@@ -31,6 +33,8 @@ if (latest && prev) {
   indices[1] = { ...indices[1], ...compute(latest.szIndex, prev.szIndex) };
   indices[2] = { ...indices[2], ...compute(latest.sp500,   prev.sp500) };
   indices[3] = { ...indices[3], ...compute(latest.nasdaq,  prev.nasdaq) };
+  indices[4] = { ...indices[4], ...compute(latest.gold,    prev.gold) };
+  indices[5] = { ...indices[5], ...compute(latest.dxy,     prev.dxy) };
 }
 
 // 用于折线图：30 日窗口（或全部，若不足 30 日）
@@ -40,6 +44,8 @@ const chartSh  = window30.map((s) => s.shIndex);
 const chartSz  = window30.map((s) => s.szIndex);
 const chartSp  = window30.map((s) => s.sp500);
 const chartNas = window30.map((s) => s.nasdaq);
+const chartGold = window30.map((s) => s.gold);
+const chartDxy  = window30.map((s) => s.dxy);
 
 const lastUpdated = data.lastUpdated;
 const source = data.source;
@@ -65,14 +71,15 @@ const source = data.source;
     </header>
 
     <!-- 当日卡片 -->
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {
         indices.map((idx) => {
           const isUp   = (idx.change ?? 0) > 0;
           const isDown = (idx.change ?? 0) < 0;
-          // 颜色：跟随当前主题 status 变量
-          const colorClass = isUp ? 'text-status-shipped' : isDown ? 'text-status-down' : 'text-text-tertiary';
+          // 颜色：上涨红、下跌绿（A 股习惯），无变化用次级文字色
+          const colorClass = isUp ? 'text-index-up' : isDown ? 'text-index-down' : 'text-text-tertiary';
           const sign = isUp ? '+' : '';
+          const precision = idx.precision ?? 2;
           return (
             <div class="rounded-card border border-border bg-bg-secondary/60 p-5 shadow-soft transition-colors hover:border-status-online/40">
               <div class="flex items-baseline justify-between">
@@ -80,11 +87,11 @@ const source = data.source;
                 <span class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">{idx.code}</span>
               </div>
               <p class:list={['mt-3 font-mono text-2xl tabular-nums', colorClass]}>
-                {idx.value != null ? idx.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                {idx.value != null ? idx.value.toLocaleString('en-US', { minimumFractionDigits: precision, maximumFractionDigits: precision }) : '—'}
               </p>
               {idx.change != null && (
                 <p class:list={['mt-1 font-mono text-xs tabular-nums', colorClass]}>
-                  {sign}{idx.change.toFixed(2)}
+                  {sign}{idx.change.toFixed(precision)}
                   <span class="ml-1.5 opacity-80">
                     ({sign}{(idx.changePct! * 100).toFixed(2)}%)
                   </span>
@@ -99,7 +106,7 @@ const source = data.source;
     <!-- 趋势图 -->
     <div class="mt-10 rounded-card border border-border bg-bg-secondary/60 p-6 shadow-soft">
       <div class="mb-4 flex items-center justify-between">
-        <h2 class="font-serif text-lg font-semibold text-text-primary">近 30 日趋势</h2>
+        <h2 class="font-serif text-lg font-semibold text-text-primary">近 30 日趋势 · A 股 + 美股</h2>
         <div class="flex flex-wrap items-center gap-3 text-xs">
           {
             [
@@ -117,7 +124,7 @@ const source = data.source;
         </div>
       </div>
       <div class="relative h-72 sm:h-96">
-        <canvas id="trend-chart" aria-label="30 日指数趋势折线图"></canvas>
+        <canvas id="trend-chart" aria-label="30 日 A 股 + 美股指数趋势折线图"></canvas>
         <div
           id="trend-chart-fallback"
           class="absolute inset-0 hidden items-center justify-center text-sm text-text-tertiary"
@@ -137,11 +144,48 @@ const source = data.source;
       </div>
     </div>
 
+    <!-- 趋势图：黄金 + 美元指数 -->
+    <div class="mt-6 rounded-card border border-border bg-bg-secondary/60 p-6 shadow-soft">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-serif text-lg font-semibold text-text-primary">近 30 日趋势 · 伦敦黄金 + 美元指数</h2>
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          {
+            [
+              { label: '伦敦黄金 (XAU/USD)', color: 'bg-index-up' },
+              { label: '美元指数 (DXY)',     color: 'bg-accent' },
+            ].map((s) => (
+              <span class="inline-flex items-center gap-1.5 text-text-secondary">
+                <span class:list={['h-2 w-2 rounded-full', s.color]} aria-hidden="true" />
+                {s.label}
+              </span>
+            ))
+          }
+        </div>
+      </div>
+      <div class="relative h-64 sm:h-80">
+        <canvas id="commodity-chart" aria-label="30 日伦敦黄金 + 美元指数趋势折线图"></canvas>
+        <div
+          id="commodity-chart-fallback"
+          class="absolute inset-0 hidden items-center justify-center text-sm text-text-tertiary"
+        >
+          图表加载中…
+        </div>
+        <div
+          id="commodity-chart-data"
+          class="hidden"
+          data-labels={JSON.stringify(chartLabels)}
+          data-gold={JSON.stringify(chartGold)}
+          data-dxy={JSON.stringify(chartDxy)}
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+
     <!-- 历史表格 -->
     <div class="mt-10">
       <h2 class="mb-4 font-serif text-lg font-semibold text-text-primary">历史快照</h2>
       <div class="overflow-x-auto rounded-card border border-border bg-bg-secondary/60">
-        <table class="w-full min-w-[640px] text-left text-sm">
+        <table class="w-full min-w-[860px] text-left text-sm">
           <thead>
             <tr class="border-b border-border text-xs uppercase tracking-widest text-text-tertiary">
               <th class="px-4 py-3 font-mono font-normal">日期</th>
@@ -149,6 +193,8 @@ const source = data.source;
               <th class="px-4 py-3 text-right font-mono font-normal">深证</th>
               <th class="px-4 py-3 text-right font-mono font-normal">标普 500</th>
               <th class="px-4 py-3 text-right font-mono font-normal">纳指</th>
+              <th class="px-4 py-3 text-right font-mono font-normal">黄金</th>
+              <th class="px-4 py-3 text-right font-mono font-normal">DXY</th>
             </tr>
           </thead>
           <tbody>
@@ -167,6 +213,12 @@ const source = data.source;
                   </td>
                   <td class="px-4 py-2.5 text-right font-mono tabular-nums text-text-primary">
                     {s.nasdaq != null ? s.nasdaq.toFixed(2) : '—'}
+                  </td>
+                  <td class="px-4 py-2.5 text-right font-mono tabular-nums text-text-primary">
+                    {s.gold != null ? s.gold.toFixed(2) : '—'}
+                  </td>
+                  <td class="px-4 py-2.5 text-right font-mono tabular-nums text-text-primary">
+                    {s.dxy != null ? s.dxy.toFixed(3) : '—'}
                   </td>
                 </tr>
               ))
@@ -202,40 +254,62 @@ const source = data.source;
     Filler,
   );
 
-  // 数据从 build-time 注入的 data-* 属性读出
-  const root = document.getElementById('trend-chart-data');
-  if (!root) {
-    console.warn('[data] no chart data node');
+  // 从 CSS 变量读取当前主题色，让图表跟随主题
+  const css = (name: string, fallback: string) =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  const hexToRgba = (hex: string, a: number) => {
+    const h = hex.replace('#','');
+    const r = parseInt(h.substring(0,2), 16);
+    const g = parseInt(h.substring(2,4), 16);
+    const b = parseInt(h.substring(4,6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  };
+
+  const palette = () => {
+    const accent       = css('--accent',          '#7AA2F7');
+    const buildingClr  = css('--status-building', '#E0AF68');
+    const onlineClr    = css('--status-online',   '#7DCFFF');
+    const experiment   = css('--status-experiment','#BB9AF7');
+    const indexUp      = css('--index-up',        '#F7768E');
+    const indexDown    = css('--index-down',      '#9ECE6A');
+    const textPrimary  = css('--text-primary',    '#C0CAF5');
+    const textTertiary = css('--text-tertiary',   '#565F89');
+    const border       = css('--border',          '#292E42');
+    const bgSecondary  = css('--bg-secondary',    '#16161E');
+    return {
+      accent, buildingClr, onlineClr, experiment, indexUp, indexDown,
+      textPrimary, textTertiary, border, bgSecondary,
+      gridColor: hexToRgba(border, 0.5),
+    };
+  };
+
+  const tooltipStyle = (p: ReturnType<typeof palette>) => ({
+    backgroundColor: p.bgSecondary,
+    titleColor: p.textPrimary,
+    bodyColor: p.textPrimary,
+    borderColor: p.border,
+    borderWidth: 1,
+    padding: 10,
+    cornerRadius: 8,
+    titleFont: { family: 'JetBrains Mono', size: 11 },
+    bodyFont:  { family: 'JetBrains Mono', size: 11 },
+  });
+
+  // ====== 图 1：A 股 + 美股 ======
+  const root1 = document.getElementById('trend-chart-data');
+  if (!root1) {
+    console.warn('[data] no trend chart data node');
   } else {
-    const labels = JSON.parse(root.dataset.labels || '[]');
-    const sh  = JSON.parse(root.dataset.sh  || '[]');
-    const sz  = JSON.parse(root.dataset.sz  || '[]');
-    const sp  = JSON.parse(root.dataset.sp  || '[]');
-    const nas = JSON.parse(root.dataset.nas || '[]');
+    const labels = JSON.parse(root1.dataset.labels || '[]');
+    const sh  = JSON.parse(root1.dataset.sh  || '[]');
+    const sz  = JSON.parse(root1.dataset.sz  || '[]');
+    const sp  = JSON.parse(root1.dataset.sp  || '[]');
+    const nas = JSON.parse(root1.dataset.nas || '[]');
 
     const canvas = document.getElementById('trend-chart') as HTMLCanvasElement | null;
     const fallback = document.getElementById('trend-chart-fallback');
     if (canvas && fallback) {
-      // 从 CSS 变量读取当前主题色，让图表跟随主题
-      const css = (name: string, fallback: string) =>
-        getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-      const accent       = css('--accent',         '#7AA2F7');
-      const buildingClr  = css('--status-building', '#E0AF68');
-      const onlineClr    = css('--status-online',   '#7DCFFF');
-      const experiment   = css('--status-experiment','#BB9AF7');
-      const textPrimary  = css('--text-primary',    '#C0CAF5');
-      const textTertiary = css('--text-tertiary',   '#565F89');
-      const border       = css('--border',          '#292E42');
-      const bgSecondary  = css('--bg-secondary',    '#16161E');
-      const hexToRgba = (hex: string, a: number) => {
-        const h = hex.replace('#','');
-        const r = parseInt(h.substring(0,2), 16);
-        const g = parseInt(h.substring(2,4), 16);
-        const b = parseInt(h.substring(4,6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${a})`;
-      };
-      const gridColor = hexToRgba(border, 0.5);
-
+      const p = palette();
       try {
         new Chart(canvas, {
           type: 'line',
@@ -245,8 +319,8 @@ const source = data.source;
               {
                 label: '上证',
                 data: sh,
-                borderColor: accent,
-                backgroundColor: hexToRgba(accent, 0.10),
+                borderColor: p.accent,
+                backgroundColor: hexToRgba(p.accent, 0.10),
                 borderWidth: 2,
                 tension: 0.25,
                 pointRadius: 0,
@@ -257,8 +331,8 @@ const source = data.source;
               {
                 label: '深证',
                 data: sz,
-                borderColor: buildingClr,
-                backgroundColor: hexToRgba(buildingClr, 0.10),
+                borderColor: p.buildingClr,
+                backgroundColor: hexToRgba(p.buildingClr, 0.10),
                 borderWidth: 2,
                 tension: 0.25,
                 pointRadius: 0,
@@ -269,8 +343,8 @@ const source = data.source;
               {
                 label: '标普 500',
                 data: sp,
-                borderColor: onlineClr,
-                backgroundColor: hexToRgba(onlineClr, 0.10),
+                borderColor: p.onlineClr,
+                backgroundColor: hexToRgba(p.onlineClr, 0.10),
                 borderWidth: 2,
                 tension: 0.25,
                 pointRadius: 0,
@@ -281,8 +355,8 @@ const source = data.source;
               {
                 label: '纳指',
                 data: nas,
-                borderColor: experiment,
-                backgroundColor: hexToRgba(experiment, 0.10),
+                borderColor: p.experiment,
+                backgroundColor: hexToRgba(p.experiment, 0.10),
                 borderWidth: 2,
                 tension: 0.25,
                 pointRadius: 0,
@@ -298,34 +372,24 @@ const source = data.source;
             interaction: { mode: 'index', intersect: false },
             plugins: {
               legend: { display: false },
-              tooltip: {
-                backgroundColor: bgSecondary,
-                titleColor: textPrimary,
-                bodyColor: textPrimary,
-                borderColor: border,
-                borderWidth: 1,
-                padding: 10,
-                cornerRadius: 8,
-                titleFont: { family: 'JetBrains Mono', size: 11 },
-                bodyFont: { family: 'JetBrains Mono', size: 11 },
-              },
+              tooltip: tooltipStyle(p),
             },
             scales: {
               x: {
                 type: 'category',
-                ticks: { color: textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
-                grid: { color: gridColor },
+                ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
+                grid: { color: p.gridColor },
               },
               y1: {
                 type: 'linear',
                 position: 'left',
-                ticks: { color: textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
-                grid: { color: gridColor },
+                ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
+                grid: { color: p.gridColor },
               },
               y2: {
                 type: 'linear',
                 position: 'right',
-                ticks: { color: textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
+                ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
                 grid: { display: false },
               },
             },
@@ -334,6 +398,97 @@ const source = data.source;
         fallback.style.display = 'none';
       } catch (err) {
         console.error('[data] chart 渲染失败', err);
+        fallback.textContent = '图表渲染失败：' + (err as Error).message;
+        fallback.classList.remove('hidden');
+      }
+    }
+  }
+
+  // ====== 图 2：伦敦黄金 + 美元指数 ======
+  const root2 = document.getElementById('commodity-chart-data');
+  if (!root2) {
+    console.warn('[data] no commodity chart data node');
+  } else {
+    const labels = JSON.parse(root2.dataset.labels || '[]');
+    const gold = JSON.parse(root2.dataset.gold || '[]');
+    const dxy  = JSON.parse(root2.dataset.dxy  || '[]');
+
+    const canvas = document.getElementById('commodity-chart') as HTMLCanvasElement | null;
+    const fallback = document.getElementById('commodity-chart-fallback');
+    if (canvas && fallback) {
+      const p = palette();
+      try {
+        new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: '伦敦黄金 (XAU/USD)',
+                data: gold,
+                borderColor: p.indexUp,
+                backgroundColor: hexToRgba(p.indexUp, 0.10),
+                borderWidth: 2,
+                tension: 0.25,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: false,
+                yAxisID: 'y1',
+              },
+              {
+                label: '美元指数 (DXY)',
+                data: dxy,
+                borderColor: p.accent,
+                backgroundColor: hexToRgba(p.accent, 0.10),
+                borderWidth: 2,
+                tension: 0.25,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: false,
+                yAxisID: 'y2',
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: tooltipStyle(p),
+            },
+            scales: {
+              x: {
+                type: 'category',
+                ticks: { color: p.textTertiary, font: { family: 'JetBrains Mono', size: 10 } },
+                grid: { color: p.gridColor },
+              },
+              y1: {
+                type: 'linear',
+                position: 'left',
+                ticks: {
+                  color: p.textTertiary,
+                  font: { family: 'JetBrains Mono', size: 10 },
+                  callback: (v) => '$' + Number(v).toFixed(0),
+                },
+                grid: { color: p.gridColor },
+              },
+              y2: {
+                type: 'linear',
+                position: 'right',
+                ticks: {
+                  color: p.textTertiary,
+                  font: { family: 'JetBrains Mono', size: 10 },
+                  callback: (v) => Number(v).toFixed(1),
+                },
+                grid: { display: false },
+              },
+            },
+          },
+        });
+        fallback.style.display = 'none';
+      } catch (err) {
+        console.error('[data] commodity chart 渲染失败', err);
         fallback.textContent = '图表渲染失败：' + (err as Error).message;
         fallback.classList.remove('hidden');
       }

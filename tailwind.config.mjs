@@ -35,6 +35,11 @@ export default {
           online:     'var(--status-online)',
           down:       'var(--status-down)',
         },
+        // 指数涨跌色（A 股习惯：涨红跌绿）
+        index: {
+          up:   'var(--index-up)',
+          down: 'var(--index-down)',
+        },
         // 向后兼容旧类名（consts.ts 内部还在用 moss/amber/iris/sky 作为逻辑名）
         // 这些 className 在主题切换时仍会跟随变量走
         moss:    'var(--status-shipped)',

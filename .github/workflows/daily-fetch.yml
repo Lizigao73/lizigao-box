@@ -52,6 +52,7 @@ jobs:
           git commit -m "chore(data): 每日自动抓取 [skip ci]
 
           - 上证指数 / 深证成指 / 标普 500 / 纳斯达克
+          - 伦敦黄金 (GC=F) / 美元指数 (^DXY)
           - 由 GitHub Actions 定时任务自动更新
           - 时间戳: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           git push
