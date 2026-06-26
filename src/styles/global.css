@@ -38,6 +38,10 @@
   --status-down:       #F7768E;
   --shadow-color:      rgba(0, 0, 0, 0.5);
 
+  /* 指数涨跌色（A 股习惯：涨红跌绿） */
+  --index-up:    #F7768E;
+  --index-down:  #9ECE6A;
+
   /* 主题特有装饰 */
   --grid-bg: none;
   --hero-glow: none;
