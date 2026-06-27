@@ -29,6 +29,18 @@ export interface DownloadEntry {
 // EXE 注册表
 export const DOWNLOADS: DownloadEntry[] = [
   {
+    id: 'github-accelerator-windows',
+    name: 'GitHub 加速器 · Windows',
+    description: '智能测速选 IP · 12h 自动刷新 · Windows 10/11 64-bit',
+    filename: 'Github加速器.zip',
+    size: 10_328_013, // 9.85 MB
+    sha256: 'A87B4CEA4CEEDD65489317C369557FF8915C16843DD6B7603E5B37477F1B9E00',
+    version: '2.1',
+    platform: 'windows',
+    releasedAt: '2026-06-27T00:00:00Z',
+    storage: 'public',
+  },
+  {
     id: 'excel-auto-tool-windows',
     name: 'Excel 自动化工具 · Windows',
     description: '可视化流程编辑器 · Windows 10/11 64-bit 安装包',
@@ -50,18 +62,6 @@ export const DOWNLOADS: DownloadEntry[] = [
     version: '1.0.0',
     platform: 'windows',
     releasedAt: '2026-06-10T00:00:00Z',
-    storage: 'public',
-  },
-  {
-    id: 'multi-agent-hub-windows',
-    name: '智能体协作中心 · Windows',
-    description: '多 LLM 智能体分工 · 安装版',
-    filename: 'MultiAgentHub-Setup-0.5.0.exe',
-    size: 62_300_000,
-    sha256: 'PLACEHOLDER_REPLACE_AFTER_BUILD',
-    version: '0.5.0-beta',
-    platform: 'windows',
-    releasedAt: '2026-06-20T00:00:00Z',
     storage: 'public',
   },
 ];
