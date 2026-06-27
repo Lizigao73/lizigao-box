@@ -121,29 +121,50 @@ const source = data.source;
           </p>
         </div>
         <div class="flex flex-wrap items-end gap-3">
-          <label class="flex flex-col gap-1">
-            <span class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">开始</span>
-            <input
-              type="date"
-              id="date-start"
-              min={dataMinDate}
-              max={dataMaxDate}
-              value={dataMinDate}
-              class="rounded-md border border-border bg-bg-primary px-3 py-1.5 font-mono text-sm text-text-primary outline-none focus:border-accent"
-            />
-          </label>
+          <div class="flex flex-col gap-1">
+            <label for="date-start" class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">开始</label>
+            <div
+              class="date-picker-wrap cursor-pointer rounded-md border border-border bg-bg-primary transition-colors hover:border-accent focus-within:border-accent"
+              data-target="date-start"
+            >
+              <input
+                type="date"
+                id="date-start"
+                min={dataMinDate}
+                max={dataMaxDate}
+                value={dataMinDate}
+                class="date-picker-input"
+                aria-label="开始日期"
+              />
+              <span class="date-picker-display pointer-events-none block px-3 py-1.5 font-mono text-sm text-text-primary">{dataMinDate}</span>
+            </div>
+          </div>
           <span class="pb-2 text-text-tertiary">→</span>
-          <label class="flex flex-col gap-1">
-            <span class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">结束</span>
-            <input
-              type="date"
-              id="date-end"
-              min={dataMinDate}
-              max={dataMaxDate}
-              value={dataMaxDate}
-              class="rounded-md border border-border bg-bg-primary px-3 py-1.5 font-mono text-sm text-text-primary outline-none focus:border-accent"
-            />
-          </label>
+          <div class="flex flex-col gap-1">
+            <label for="date-end" class="font-mono text-[10px] uppercase tracking-widest text-text-tertiary">结束</label>
+            <div
+              class="date-picker-wrap cursor-pointer rounded-md border border-border bg-bg-primary transition-colors hover:border-accent focus-within:border-accent"
+              data-target="date-end"
+            >
+              <input
+                type="date"
+                id="date-end"
+                min={dataMinDate}
+                max={dataMaxDate}
+                value={dataMaxDate}
+                class="date-picker-input"
+                aria-label="结束日期"
+              />
+              <span class="date-picker-display pointer-events-none block px-3 py-1.5 font-mono text-sm text-text-primary">{dataMaxDate}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            id="date-apply"
+            class="rounded-pill border border-accent bg-accent px-4 py-1.5 font-mono text-xs font-semibold text-bg-primary transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            确认
+          </button>
           <div class="flex flex-wrap gap-1.5">
             {[
               { id: '1m', label: '近 1 月', days: 30 },
@@ -621,6 +642,8 @@ const source = data.source;
     chart1.data.datasets[2].data = slice.sp;
     chart1.data.datasets[3].data = slice.nas;
     chart1.update();
+    // 关键：重置 zoom 状态，否则缩放/平移会一直停留在原范围
+    chart1.resetZoom('none');
 
     // 图表 2
     if (chart2) {
@@ -628,6 +651,7 @@ const source = data.source;
       chart2.data.datasets[0].data = slice.gold;
       chart2.data.datasets[1].data = slice.dxy;
       chart2.update();
+      chart2.resetZoom('none');
     }
 
     // 表格：根据 data-date 隐藏范围外行（用缓存的 historyRows）
@@ -650,36 +674,114 @@ const source = data.source;
     }
   }
 
-  if (startInput) startInput.addEventListener('change', () => {
-    if (startInput.value && endInput?.value) applyRange(startInput.value, endInput.value);
-  });
-  if (endInput) endInput.addEventListener('change', () => {
-    if (startInput?.value && endInput.value) applyRange(startInput.value, endInput.value);
+  // ===== 自定义日期选择器 =====
+  // 把整个 wrap 区域做成可点击 → 调原生 picker
+  function openDatePicker(input: HTMLInputElement) {
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+      } else {
+        input.focus();
+        input.click();
+      }
+    } catch {
+      input.focus();
+      input.click();
+    }
+  }
+
+  // 同步 wrap 上显示的日期文本
+  function syncDateDisplay(input: HTMLInputElement) {
+    const id = input.id;
+    const wrap = document.querySelector<HTMLDivElement>(`.date-picker-wrap[data-target="${id}"]`);
+    if (!wrap) return;
+    const display = wrap.querySelector<HTMLSpanElement>('.date-picker-display');
+    if (display) display.textContent = input.value || '—';
+  }
+
+  // wrap 区域点击 → 调 picker
+  document.querySelectorAll<HTMLDivElement>('.date-picker-wrap').forEach((wrap) => {
+    wrap.addEventListener('click', (e) => {
+      // 如果点击的是 input 自己（已经触发原生 picker），不重复调
+      if ((e.target as HTMLElement).tagName === 'INPUT') return;
+      e.preventDefault();
+      const targetId = wrap.dataset.target;
+      if (!targetId) return;
+      const input = document.getElementById(targetId) as HTMLInputElement | null;
+      if (input) openDatePicker(input);
+    });
   });
 
-  // 预设按钮
+  // input change 事件 → 同步显示文本 + 启用确认按钮（不 applyRange）
+  function onDateInputChange(input: HTMLInputElement) {
+    syncDateDisplay(input);
+    if (applyBtn) applyBtn.disabled = false;
+    if (summaryEl) {
+      const s = startInput?.value || dataMin;
+      const e = endInput?.value || dataMax;
+      const n = (() => {
+        const sIdx = allLabels.findIndex((d) => d >= s);
+        const eIdx = (() => { for (let i = allLabels.length - 1; i >= 0; i--) if (allLabels[i] <= e) return i; return -1; })();
+        if (sIdx < 0 || eIdx < 0 || sIdx > eIdx) return 0;
+        return eIdx - sIdx + 1;
+      })();
+      summaryEl.textContent = `已选择 ${n} 个交易日（${s} → ${e}）· 点击"确认"应用`;
+    }
+  }
+  if (startInput) startInput.addEventListener('change', () => onDateInputChange(startInput));
+  if (endInput)   endInput.addEventListener('change',   () => onDateInputChange(endInput));
+
+  // "确认" 按钮
+  const applyBtn = document.getElementById('date-apply') as HTMLButtonElement | null;
+  function doApply() {
+    if (startInput?.value && endInput?.value) {
+      applyRange(startInput.value, endInput.value);
+      if (applyBtn) applyBtn.disabled = true;
+    }
+  }
+  if (applyBtn) {
+    applyBtn.disabled = true; // 初始未变化时禁用
+    applyBtn.addEventListener('click', doApply);
+  }
+  // 回车快捷键
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.target === startInput || e.target === endInput)) {
+      e.preventDefault();
+      doApply();
+    }
+  });
+
+  // 预设按钮（点完直接应用 + 更新 input）
   document.querySelectorAll<HTMLButtonElement>('[data-range-preset]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const days = Number(btn.dataset.rangeDays || '30');
       if (days >= 9999) {
-        applyRange(dataMin, dataMax);
         if (startInput) startInput.value = dataMin;
         if (endInput)   endInput.value   = dataMax;
+        syncDateDisplay(startInput!);
+        syncDateDisplay(endInput!);
+        applyRange(dataMin, dataMax);
+        if (applyBtn) applyBtn.disabled = true;
         return;
       }
-      // 在 allLabels 升序里取最后 N 条
       const endIdx = allLabels.length - 1;
       const startIdx = Math.max(0, endIdx - days + 1);
       const s = allLabels[startIdx];
       const e = allLabels[endIdx];
       if (startInput) startInput.value = s;
       if (endInput)   endInput.value   = e;
+      syncDateDisplay(startInput!);
+      syncDateDisplay(endInput!);
       applyRange(s, e);
+      if (applyBtn) applyBtn.disabled = true;
     });
   });
 
   // 首次渲染：默认范围
   applyRange(initRange.start, initRange.end);
+  // 首次同步 wrap 显示文本
+  if (startInput) syncDateDisplay(startInput);
+  if (endInput)   syncDateDisplay(endInput);
 
   // ===== IDB 缓存回填（所有 const 声明完毕后再启动）=====
   (async () => {

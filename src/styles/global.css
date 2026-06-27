@@ -257,4 +257,36 @@
                 color var(--t-base) var(--ease-out-soft),
                 box-shadow var(--t-base) var(--ease-out-soft) !important;
   }
+
+  /* ===========================================================
+   * 自定义日期选择器（data.astro）
+   * 把原生 input[type=date] 透明覆盖在视觉元素上，整个区域可点击触发 picker
+   * =========================================================== */
+  .date-picker-wrap {
+    position: relative;
+    display: inline-block;
+    min-width: 11rem;
+  }
+  .date-picker-wrap .date-picker-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    color-scheme: dark;            /* 强制 picker 用深色风格 */
+    accent-color: var(--accent);   /* picker 主题色与页面一致 */
+    border: 0;
+    background: transparent;
+    padding: 0;
+    z-index: 1;
+  }
+  .date-picker-wrap .date-picker-display {
+    display: block;
+    user-select: none;
+  }
+  /* Firefox 不完全支持 color-scheme，单独加个 fallback */
+  @-moz-document url-prefix() {
+    .date-picker-wrap .date-picker-input { color: var(--bg-primary); }
+  }
 }

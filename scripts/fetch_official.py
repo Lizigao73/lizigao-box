@@ -149,10 +149,52 @@ def fetch_foreign_futures(symbol: str, days: int = 250) -> list[tuple[str, float
     return []
 
 
+# ============== 美元指数（DXY）历史：东方财富 push2his ==============
+# 100.UDI = 全球指数 - 美元指数（已验证 secid）
+
+def _em_history_klines(secid: str, klt: int = 101, count: int = 250) -> list[tuple[str, float]]:
+    """东方财富 push2his 历史 K 线
+    secid: "100.UDI" (美元指数), "100.INX" (标普 500), "100.IXIC" (纳指) 等
+    klt: 101=日线, 102=周线
+    返回 [(date, close), ...] 升序
+    """
+    url = (
+        f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
+        f"?secid={secid}&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57"
+        f"&klt={klt}&fqt=1&end=20500101&lmt={count}"
+    )
+    raw = _http_get_with_retry(url, timeout=20)
+    if raw is None:
+        return []
+    try:
+        d = json.loads(raw.decode("utf-8", errors="replace"))
+        data = d.get("data") or {}
+        klines = data.get("klines") or []
+        out: list[tuple[str, float]] = []
+        for line in klines:
+            parts = line.split(",")
+            if len(parts) < 6:
+                continue
+            try:
+                # fields2 顺序: f51=date, f52=open, f53=close, f54=high, f55=low, f56=volume, f57=amount
+                out.append((parts[0], float(parts[2])))
+            except (ValueError, IndexError):
+                continue
+        return out
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"  EM kline {secid} 解析失败: {e}", file=sys.stderr)
+        return []
+
+
+def fetch_dxy_history(days: int = 250) -> list[tuple[str, float]]:
+    """美元指数历史（东方财富 UDI）"""
+    return _em_history_klines("100.UDI", 101, days)
+
+
 # ============== 美元指数（DXY）兜底：sina hq DINI ==============
 
 def fetch_dxy_realtime() -> float | None:
-    """sina hq DINI 实时报价（仅拿当日值）"""
+    """sina hq DINI 实时报价（仅拿当日值，做增量补全）"""
     raw = _http_get_with_retry("https://hq.sinajs.cn/list=DINI", timeout=10)
     if raw is None:
         return None
@@ -162,12 +204,8 @@ def fetch_dxy_realtime() -> float | None:
         if not m:
             return None
         parts = m.group(1).split(",")
-        # DINI 字段: 时间, 当前价, 最高, 最低, 昨收, ... （具体看接口）
         if len(parts) >= 2:
             try:
-                # 字段 1 是最新价（部分品种），字段 5 是昨收
-                # 实际接口返回是 02:49:27 101.3428 101.3428 101.4559 5267 101.4599 ...
-                # 索引 1 = 当前价, 索引 5 = 昨收
                 cur = float(parts[1]) if parts[1] else None
                 if cur is not None and 80 < cur < 130:
                     return cur
@@ -215,15 +253,17 @@ def main() -> int:
         print(f"         -> {len(gld_hist)} 条")
     else:
         gld_hist = []
-    # DXY 用线程池独立抓（不涉及 mini_racer）
-    print("  [6/6] 美元指数 DXY (sina hq DINI) ...")
+    # DXY 用东方财富历史（独立抓取，不涉及 mini_racer）
+    print("  [6/6] 美元指数 DXY (东方财富 100.UDI) ...")
+    dxy_hist = fetch_dxy_history(250)
+    print(f"        -> {len(dxy_hist)} 条")
     dxy_now = fetch_dxy_realtime()
-    print(f"        -> {dxy_now}")
+    print(f"        -> 实时: {dxy_now}")
 
     print(f"\n  上证 {len(sh_hist)} 条 | 深证 {len(sz_hist)} 条")
     print(f"  标普 {len(sp_hist)} 条 | 纳指 {len(nas_hist)} 条")
     print(f"  伦敦金 {len(xau_hist)} 条 | COMEX 黄金 {len(gld_hist)} 条")
-    print(f"  美元指数实时价: {dxy_now}")
+    print(f"  美元指数历史 {len(dxy_hist)} 条 | 实时价: {dxy_now}")
 
     success_count = sum(1 for h in (sh_hist, sz_hist, sp_hist, nas_hist) if h)
     if success_count < 2:
@@ -240,8 +280,7 @@ def main() -> int:
     sp_map  = {d: v for d, v in sp_hist}
     nas_map = {d: v for d, v in nas_hist}
     gld_map = {d: v for d, v in gold_hist}
-    # DXY 没有 K 线，先用 None（前端会显示 N/A）
-    dxy_map: dict[str, float] = {}
+    dxy_map = {d: v for d, v in dxy_hist}
 
     # 全部日期（取并集，按升序）
     all_dates = sorted(
@@ -265,8 +304,8 @@ def main() -> int:
             "fetchedAt": now_iso,
         })
 
-    # forward fill 缺失值（仅对有源数据的字段）
-    for key in ("shIndex", "szIndex", "sp500", "nasdaq", "gold"):
+    # forward fill 缺失值
+    for key in ("shIndex", "szIndex", "sp500", "nasdaq", "gold", "dxy"):
         last = None
         for s in snapshots:
             if s[key] is None:
@@ -275,7 +314,7 @@ def main() -> int:
             else:
                 last = s[key]
 
-    # 把 DXY 实时价挂到最新一条（仅当日）
+    # 把 DXY 实时价挂到最新一条（仅当日）— 覆盖 forward fill
     if dxy_now is not None and snapshots:
         snapshots[-1]["dxy"] = dxy_now
 
@@ -291,7 +330,7 @@ def main() -> int:
             f"A股(akshare-新浪 sh000001/sz399001) · "
             f"标普500/纳指(akshare.index_us_stock_sina .INX/.IXIC) · "
             f"{gold_source}(akshare.futures_foreign_hist) · "
-            f"美元指数(sina hq DINI 实时，仅当日)"
+            f"美元指数(东方财富 push2his 100.UDI 历史 + sina hq DINI 实时)"
         ),
         "snapshots": snapshots,
     }
@@ -299,7 +338,7 @@ def main() -> int:
         json.dumps(data, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(f"\n✓ 已写入 {OUT}：{len(snapshots)} 条（{snapshots[0]['date']} → {snapshots[-1]['date']}）")
+    print(f"\n[OK] 已写入 {OUT}：{len(snapshots)} 条（{snapshots[0]['date']} -> {snapshots[-1]['date']}）")
     return 0
 
 
