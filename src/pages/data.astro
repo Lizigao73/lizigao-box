@@ -50,8 +50,18 @@ const dataMinDate = allLabels[0] ?? '';
 const dataMaxDate = allLabels[allLabels.length - 1] ?? '';
 const totalDays   = allLabels.length;
 
-const lastUpdated = data.lastUpdated;
+// "最后更新" 显示数据本身的最新日期（不是 fetch 的时间戳）
+const lastUpdated = latest?.date ?? data.lastUpdated ?? '';
 const source = data.source;
+
+// 默认范围：最近 30 个交易日（数据不足则取全部）
+const defaultRangeDays = 30;
+const defaultEndIdx = allLabels.length - 1;
+const defaultStartIdx = Math.max(0, defaultEndIdx - defaultRangeDays + 1);
+const initRange = {
+  start: allLabels[defaultStartIdx] ?? dataMinDate,
+  end: allLabels[defaultEndIdx] ?? dataMaxDate,
+};
 ---
 
 <BaseLayout title="数据追踪" description="A 股 / 美股主要指数每日快照，支持日期范围选择。">
@@ -69,7 +79,7 @@ const source = data.source;
         A 股 + 美股主要指数收盘后由 GitHub Actions 自动抓取，每日 16:00（北京时间）更新。
       </p>
       <p class="mt-1 font-mono text-xs text-text-tertiary">
-        最后更新：{lastUpdated} · 数据源：{source}
+        数据日期：<span class="text-text-secondary">{lastUpdated}</span> · 数据源：<span class="text-text-secondary">{source}</span>
       </p>
     </header>
 

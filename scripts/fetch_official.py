@@ -324,8 +324,9 @@ def main() -> int:
         print(f"  {s['date']}  上证={s['shIndex']} 深证={s['szIndex']} 标普={s['sp500']} 纳指={s['nasdaq']} 黄金={s['gold']} DXY={s['dxy']}")
 
     # 写回
+    # lastUpdated 用最新一条 snapshot 的日期（数据本身的日期，不是 fetch 时间戳）
     data = {
-        "lastUpdated": now_iso,
+        "lastUpdated": snapshots[-1]["date"] if snapshots else now_iso,
         "source": (
             f"A股(akshare-新浪 sh000001/sz399001) · "
             f"标普500/纳指(akshare.index_us_stock_sina .INX/.IXIC) · "
