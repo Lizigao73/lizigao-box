@@ -5,6 +5,10 @@ on:
     - cron: '0 8 * * *'  # 每天 UTC 8:00（北京时间 16:00）抓取
   workflow_dispatch:       # 允许手动触发
 
+# 关键：让 GITHUB_TOKEN 能 push（默认是 read-only，会 403）
+permissions:
+  contents: write
+
 jobs:
   fetch-snapshots:
     runs-on: ubuntu-latest
